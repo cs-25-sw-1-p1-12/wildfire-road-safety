@@ -1,26 +1,28 @@
+#include <stddef.h>
+
 #ifndef ROADRISK_NODENFUNCTION_LIBRARY_H
 #define ROADRISK_NODENFUNCTION_LIBRARY_H
 
-typedef struct Node {
+typedef struct {
     float lon;
     float lat;
     int x;
     int y;
 } Node;
 
-typedef struct BoundBox {
+typedef struct {
     float lat1;
     float long1;
     float lat2;
     float long2;
 } BoundBox;
 
-typedef struct RoadData {
+typedef struct {
     Node* nodes;
-    int nodeCount;
+    size_t nodeCount;
 } RoadData;
 
-typedef struct FireData {
+typedef struct {
     BoundBox bound_box;
     int x;
     int y;
