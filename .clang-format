@@ -1,0 +1,69 @@
+BasedOnStyle: LLVM
+
+BreakBeforeBraces: Allman
+ColumnLimit: 100
+
+  ## Indents
+IndentWidth: 4
+TabWidth: 4
+BracedInitializerIndentWidth: 4
+UseTab: Never
+ConstructorInitializerIndentWidth: 8
+ContinuationIndentWidth: 4
+IndentAccessModifiers: false
+
+
+  ## Pointers
+PointerBindsToType: false
+PointerAlignment: Left
+DerivePointerAlignment: true
+
+  ## Clean code
+RemoveParentheses: ReturnStatement
+RemoveSemicolon: true
+# Public: and Private: offset 
+AccessModifierOffset: -4
+
+AlignAfterOpenBracket: Align
+AlignArrayOfStructures: Right
+AlignEscapedNewlines: Left
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 1
+
+AllowAllArgumentsOnNextLine: true
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AlwaysBreakAfterReturnType: None
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: true
+BinPackParameters: true
+BitFieldColonSpacing: Both
+BreakInheritanceList: AfterComma
+BreakConstructorInitializers: BeforeColon
+CompactNamespaces: true
+EmptyLineAfterAccessModifier: Leave
+EmptyLineBeforeAccessModifier: LogicalBlock
+FixNamespaceComments: true
+MaxEmptyLinesToKeep: 9
+
+  ## Includes
+IncludeBlocks: Regroup
+
+
+KeepEmptyLinesAtTheStartOfBlocks: false
+ObjCSpaceAfterProperty: true
+ObjCSpaceBeforeProtocolList: true
+SpacesBeforeTrailingComments: 1
+
+# Switch cases
+IndentCaseLabels: true
+  ## Inline case expressions
+# AllowShortCaseExpressionOnASingleLine: true
+# AllowShortCaseLabelsOnASingleLine: true
+# AlignConsecutiveShortCaseStatements:
+#   Enabled: true
+#   AcrossEmptyLines: true
+#   AcrossComments: true
+#   AlignCaseColons: false
