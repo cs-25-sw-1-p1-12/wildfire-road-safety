@@ -29,4 +29,6 @@ typedef struct
 
 LCoord global_to_local(GCoord gcoord, BoundBox bbox, size_t height, size_t width);
 
+void print_local(LCoord local);
+
 #endif // GEO_H
