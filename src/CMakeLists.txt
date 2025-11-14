@@ -5,8 +5,7 @@
 # add_subdirectory(visual)
 
 set(SOURCE_FILES ./map/map.c ./risk/risk.c ./simulation/simulation.c
-    ./visual/visual.c
-        models/geo.c)
+    ./visual/visual.c)
 
 add_executable(wfrs main.c ${SOURCE_FILES})
 
