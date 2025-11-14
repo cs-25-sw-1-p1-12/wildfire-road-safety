@@ -5,9 +5,12 @@
 #include "../models/road.h"
 
 /// Assesses the risk of a road. Putting the risk into road.risk and returning it
-RoadRisk assess_road(RoadSeg* road, FireSlice fire);
+RoadRisk assess_road(RoadSeg* road, FireVec* fire);
 
 /// Assesses all roads in a list, putting their risk into their data
 void assess_roads(RoadSegSlice* roads, FireSlice fires);
+
+/// Temporary function for testing - to be removed once the actual function has been implemented
+int fire_distance_from_road(RoadSeg road, FireArea fire);
 
 #endif // RISK_H
