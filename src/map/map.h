@@ -4,11 +4,13 @@
 #include "../models/geo.h"
 #include "../models/road.h"
 
+#include <stdbool.h>
+
 /// Get all the road segments from OpenStreetMaps API
-RoadSegSlice get_road_segments(BoundBox bbox);
+bool get_road_segments(BoundBox bbox, RoadSegSlice* slice);
 
-FireSlice get_fire_areas(BoundBox bbox);
+bool get_fire_areas(BoundBox bbox, FireSlice* fire_buf);
 
-Vec2 get_wind_velocity(GCoord coord);
+bool get_wind_velocity(GCoord coord, Vec2* wind_buf);
 
 #endif // MAP_H

@@ -126,20 +126,6 @@ void str_ensure_cap(String* str, size_t new_cap)
     }
 }
 
-size_t str_write(void* ptr, size_t size, size_t nmemb, String* str)
-{
-    size_t new_len = str->len + size * nmemb;
-
-    str_ensure_cap(str, new_len);
-
-    memcpy(str->chars + str->len, ptr, size * nmemb);
-
-    str->chars[new_len] = '\0';
-    str->len = new_len;
-
-    return size * nmemb;
-}
-
 void* clone_arr(void* ptr, size_t size)
 {
     void* buffer = malloc(size);

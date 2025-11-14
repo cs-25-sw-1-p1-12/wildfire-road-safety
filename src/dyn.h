@@ -78,9 +78,6 @@ StringVec str_split_at(String str, size_t idx);
 size_t read_file_to_str(String* buffer, FILE* file);
 size_t read_lines(StringVec* linebuffer, FILE* file);
 
-/// For libcurl
-size_t str_write(void* ptr, size_t size, size_t nmemb, String* s);
-
 void* clone_arr(void* ptr, size_t size);
 
 #define slice_from(arr, size) \
