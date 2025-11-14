@@ -13,5 +13,6 @@ typedef struct
 } FireArea;
 
 typedef SliceDef(FireArea) FireSlice;
+typedef VecDef(FireArea) FireVec;
 
 #endif // FIRE_DATA_H
