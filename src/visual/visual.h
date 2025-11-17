@@ -4,8 +4,12 @@
 #include "../models/fire.h"
 #include "../models/road.h"
 
-#define VIEWPORT_HEIGHT 10
-#define VIEWPORT_WIDTH 10
+#define VIEWPORT_HEIGHT 50
+#define VIEWPORT_WIDTH 50
+#define TEXTBOX_WIDTH 65;
+#define TEXTBOX_HEIGHT 30;
+#define TEXTBOX_OFFSET_X 15
+#define TEXTBOX_OFFSET_Y 5
 
 void draw_current_state(RoadSegSlice roads, FireSlice fires);
 ///Refreshes the console, and redraws everything

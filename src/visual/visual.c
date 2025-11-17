@@ -19,9 +19,20 @@
 #define COLOR_ORANGE 12
 
 
-#define TEXTBOX_WIDTH 30;
-#define TEXTBOX_HEIGHT 10;
-
+/*
+185:╣
+186:║
+187:╗
+188:╝
+200:╚
+201:╔
+202:╩
+203:╦
+204:╠
+205:═
+206:╬
+219:█
+ */
 
 typedef struct
 {
@@ -38,6 +49,10 @@ void printf_color(char* string, int colorId);
 void draw_console()
 {
     clear();
+    // for (int i = 0; i < 255; i++)
+    // {
+    //     printf("%d:%c\n", i, i);
+    // }
     int textRead = 0;
     const int vHeight = VIEWPORT_HEIGHT;
     const int tHeight = TEXTBOX_HEIGHT;
@@ -48,7 +63,10 @@ void draw_console()
     {
         if (y < vHeight + 1)
         {
-            printf("| ");
+            if (y == 0)
+                printf("%c", 201);
+            else
+                printf("%c", 186);
             char* gridMapSlice = calloc(VIEWPORT_WIDTH * 2 + 1, sizeof(char));
             if (y == 0)
             {
@@ -59,7 +77,7 @@ void draw_console()
                     if (x >= length && x < length + sizeof(headerText) - 1)
                         gridMapSlice[x] = headerText[x - length];
                     else
-                        gridMapSlice[x] = ' ';
+                        gridMapSlice[x] = (char)205;
                 }
                 printf_color(gridMapSlice, COLOR_WHITE);
             }
@@ -67,15 +85,18 @@ void draw_console()
             {
                 for (int x = 0; x < VIEWPORT_WIDTH; ++x)
                 {
-                    gridMapSlice[x * 2 + 1] = ' ';
-                    gridMapSlice[x * 2] = 'X';
+                    gridMapSlice[x * 2 + 1] = (char)219;
+                    gridMapSlice[x * 2] = (char)219;
                 }
                 printf_color(gridMapSlice, COLOR_GREEN);
             }
 
 
             free(gridMapSlice);
-            printf("|  ");
+            if (y == 0)
+                printf("%c", 187);
+            else
+                printf("%c", 186);
         }
         else
         {
@@ -84,13 +105,37 @@ void draw_console()
                 printf("  ");
         }
 
-        if (y < tHeight)
+        for (int i = 0; i < TEXTBOX_OFFSET_X; i++)
+        {
+            printf(" ");
+        }
+        if (y - TEXTBOX_OFFSET_Y < tHeight && y >= TEXTBOX_OFFSET_Y)
         {
             char* textBoxSlice = calloc(tWidth, sizeof(char));
             for (int x = 0; x < tWidth; x++)
             {
-                if (x == 0 || x >= tWidth - 1)
-                    textBoxSlice[x] = '|';
+                if (y - TEXTBOX_OFFSET_Y == 0)
+                {
+                    char headerText[] = "MESSAGE BOX";
+                    int length = tWidth / 2 - ((sizeof(headerText) - 1) / 2);
+                    if (x == 0 || x >= tWidth - 1)
+                        textBoxSlice[x] = x < tWidth - 1 ? (char)201 : (char)187;
+                    else
+                        if (x >= length && x < length + sizeof(headerText) - 1)
+                            textBoxSlice[x] = headerText[x - length];
+                        else
+                            textBoxSlice[x] = (char)205;
+
+                }
+                else if (y - TEXTBOX_OFFSET_Y == tHeight - 1)
+                {
+                    if (x == 0 || x >= tWidth - 1)
+                        textBoxSlice[x] = x < tWidth - 1 ? (char)200 : (char)188;
+                    else
+                        textBoxSlice[x] = (char)205;
+                }
+                else if (x == 0 || x >= tWidth - 1)
+                    textBoxSlice[x] = (char)186;
                 else
                 {
                     //ACTUALLY WRITE
@@ -110,8 +155,13 @@ void draw_console()
         printf("\n");
     }
 
-    for (int i = 0; i < tWidth + (vWidth + 1) * 2 + 3 + vWidth*2; i++)
-        printf_color("-", COLOR_WHITE);
+    for (int i = 0; i < tWidth + (vWidth + 1) * 2 + 2 + TEXTBOX_OFFSET_X*2; i++)
+    {
+        if (i == 0 || i == (vWidth) * 2 + 1)
+            printf("%c", 202);
+        else
+            printf("%c", 205);
+    }
     printf("\n");
     for (int i = 0; i < commands.len; i++)
     {
@@ -125,9 +175,10 @@ void write_to_textbox(char* text)
     textBoxText = str_slice_from(text);
     draw_console();
 }
+
 void append_console_command(void* action, char* description)
 {
-    ConsoleCommands cmd = {action,description};
+    const ConsoleCommands cmd = {action, description};
     vec_append(&commands, &cmd, 1);
 }
 
@@ -155,6 +206,7 @@ void clear()
         );
     SetConsoleCursorPosition(console, topLeft);
 }
+
 void printf_color(char* string, int colorId)
 {
     HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
