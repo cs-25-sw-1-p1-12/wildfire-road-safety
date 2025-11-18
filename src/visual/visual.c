@@ -1,5 +1,6 @@
 #include "visual.h"
 #include "../dyn.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -7,6 +8,7 @@
 //https://stackoverflow.com/questions/6486289/how-to-clear-the-console-in-c
 //https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
 
+#define ANSI_RED "\033[31m"
 #define ANSI_GREEN "\033[32m"
 #define ANSI_NORMAL "\033[0m"
 
@@ -28,7 +30,7 @@
 
 typedef struct
 {
-    void* triggerAction;
+    void (*triggerAction)();
     char* descriptionText;
 } ConsoleCommands;
 
@@ -48,7 +50,7 @@ void init_console()
 #endif
 }
 
-void make_white_space(String *string, int amount)
+void make_white_space(String* string, int amount)
 {
     char whiteSpace[amount];
     for (int x = 0; x < sizeof(whiteSpace); ++x)
@@ -67,9 +69,64 @@ const int vWidth = VIEWPORT_WIDTH;
 const int tWidth = TEXTBOX_WIDTH;
 const int height = (tHeight > vHeight) ? tHeight : vHeight;
 
+
+void execute_command()
+{
+    unsigned int index = -1;
+
+    draw_console();
+    printf("ATTENTION USE CTRL-Z TO SUBMIT: %s", ANSI_GREEN);
+    char* endpoint;
+    char readBuffer[10];
+    int length = 0;
+    for (int i = 0; i < 10; i++)
+    {
+        int charCode = getchar();
+        if (charCode == -1)
+            break;
+        if (charCode == 127)
+        {
+            if (i > 0)
+            {
+                printf("\b \b");
+            }
+            i -= 2;
+            if (i < 0)
+                i = 0;
+            continue;
+        }
+        readBuffer[i] = (char)charCode;
+        if (isdigit(readBuffer[i])) length = i + 1; //Prevent the command to default to index 0 if no cmd is selected
+        printf("%c", readBuffer[i]);
+    }
+    printf("\33[2K\r");
+
+    index = strtol(readBuffer, &endpoint, 0);
+    if (index < commands.len && length > 0)
+    {
+        commands.items[index].triggerAction();
+    }
+    else
+    {
+        clear();
+        if (commands.len <= 0)
+        {
+            printf("%sERROR:%s COULD NOT FIND ANY COMMANDS!%s", ANSI_RED, ANSI_GREEN, ANSI_NORMAL);
+        }
+        else
+        {
+            printf("%sERROR:%s INVALID COMMAND INDEX!%s", ANSI_RED, ANSI_GREEN, ANSI_NORMAL);
+        }
+        getchar();
+    }
+    printf(ANSI_NORMAL);
+}
+
 void draw_console()
 {
-    printf("%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST SLOW)", ANSI_NORMAL);
+    printf(
+        "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST SLOW)",
+        ANSI_NORMAL);
     clear();
     int textRead = 0;
 
@@ -193,7 +250,7 @@ void write_to_textbox(char* text)
     draw_console();
 }
 
-void append_console_command(void* action, char* description)
+void append_console_command(void (*action), char* description)
 {
     const ConsoleCommands cmd = {action, description};
     vec_append(&commands, &cmd, 1);
