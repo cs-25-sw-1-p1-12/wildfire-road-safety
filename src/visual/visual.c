@@ -1,22 +1,14 @@
 #include "visual.h"
 #include "../dyn.h"
-#ifdef __linux__
-#include "unistd.h"
-#elif _WIN32
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
 //https://stackoverflow.com/questions/6486289/how-to-clear-the-console-in-c
 //https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
 
-#define COLOR_BLUE 1
-#define COLOR_GREEN 2
-#define COLOR_RED 4
-#define COLOR_PURPLE 5
-#define COLOR_BROWN 6
-#define COLOR_WHITE 7
-#define COLOR_GRAY 8
-#define COLOR_ORANGE 12
+#define ANSI_GREEN "\033[32m"
+#define ANSI_NORMAL "\033[0m"
 
 
 /*
@@ -46,30 +38,56 @@ VecDef(ConsoleCommands) commands;
 void clear();
 void printf_color(char* string, int colorId);
 
+void init_console()
+{
+#ifdef _WIN32
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    SetConsoleMode(hInput, ENABLE_VIRTUAL_TERMINAL_INPUT);
+    HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#endif
+}
+
+void make_white_space(String *string, int amount)
+{
+    char whiteSpace[amount];
+    for (int x = 0; x < sizeof(whiteSpace); ++x)
+        whiteSpace[x] = x < (sizeof(whiteSpace) - 1) ? ' ' : '\0';
+    str_append(string, whiteSpace);
+}
+
+const char tlCorner[2] = {(char)201, '\0'}; //╔
+const char verticalLine[2] = {(char)186, '\0'}; //║
+const char trCorner[2] = {(char)187, '\0'}; //╗
+const char* linebreak = "\n"; //line break
+
+const int vHeight = VIEWPORT_HEIGHT;
+const int tHeight = TEXTBOX_HEIGHT;
+const int vWidth = VIEWPORT_WIDTH;
+const int tWidth = TEXTBOX_WIDTH;
+const int height = (tHeight > vHeight) ? tHeight : vHeight;
+
 void draw_console()
 {
+    printf("%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST SLOW)", ANSI_NORMAL);
     clear();
-    // for (int i = 0; i < 255; i++)
-    // {
-    //     printf("%d:%c\n", i, i);
-    // }
     int textRead = 0;
-    const int vHeight = VIEWPORT_HEIGHT;
-    const int tHeight = TEXTBOX_HEIGHT;
-    const int vWidth = VIEWPORT_WIDTH;
-    const int tWidth = TEXTBOX_WIDTH;
-    const int height = (tHeight > vHeight) ? tHeight : vHeight;
+
+    String TUIBody = str_from(ANSI_NORMAL);
     for (int y = 0; y < height; y++)
     {
         if (y < vHeight + 1)
         {
+            str_append(&TUIBody, ANSI_NORMAL);
             if (y == 0)
-                printf("%c", 201);
+                str_append(&TUIBody, tlCorner);
             else
-                printf("%c", 186);
+                str_append(&TUIBody, verticalLine);
+
             char* gridMapSlice = calloc(VIEWPORT_WIDTH * 2 + 1, sizeof(char));
             if (y == 0)
             {
+                str_append(&TUIBody, ANSI_NORMAL);
                 char headerText[] = "MAP";
                 int length = (VIEWPORT_WIDTH * 2 - 2) / 2 - ((sizeof(headerText) - 1) / 2);
                 for (int x = 0; x < VIEWPORT_WIDTH * 2; ++x)
@@ -79,36 +97,33 @@ void draw_console()
                     else
                         gridMapSlice[x] = (char)205;
                 }
-                printf_color(gridMapSlice, COLOR_WHITE);
+                // printf_color(gridMapSlice, COLOR_WHITE);
             }
             else
             {
+                str_append(&TUIBody, ANSI_GREEN);
                 for (int x = 0; x < VIEWPORT_WIDTH; ++x)
                 {
                     gridMapSlice[x * 2 + 1] = (char)219;
                     gridMapSlice[x * 2] = (char)219;
                 }
-                printf_color(gridMapSlice, COLOR_GREEN);
+                // printf_color(gridMapSlice, COLOR_GREEN);
             }
-
+            str_append(&TUIBody, gridMapSlice);
 
             free(gridMapSlice);
+            str_append(&TUIBody, ANSI_NORMAL);
             if (y == 0)
-                printf("%c", 187);
+                str_append(&TUIBody, trCorner);
             else
-                printf("%c", 186);
+                str_append(&TUIBody, verticalLine);
         }
         else
         {
-            printf("     ");
-            for (int x = 0; x < VIEWPORT_WIDTH; ++x)
-                printf("  ");
+            make_white_space(&TUIBody, VIEWPORT_WIDTH + 5 + 1);
         }
 
-        for (int i = 0; i < TEXTBOX_OFFSET_X; i++)
-        {
-            printf(" ");
-        }
+        make_white_space(&TUIBody, TEXTBOX_OFFSET_X);
         if (y - TEXTBOX_OFFSET_Y < tHeight && y >= TEXTBOX_OFFSET_Y)
         {
             char* textBoxSlice = calloc(tWidth, sizeof(char));
@@ -120,12 +135,10 @@ void draw_console()
                     int length = tWidth / 2 - ((sizeof(headerText) - 1) / 2);
                     if (x == 0 || x >= tWidth - 1)
                         textBoxSlice[x] = x < tWidth - 1 ? (char)201 : (char)187;
+                    else if (x >= length && x < length + sizeof(headerText) - 1)
+                        textBoxSlice[x] = headerText[x - length];
                     else
-                        if (x >= length && x < length + sizeof(headerText) - 1)
-                            textBoxSlice[x] = headerText[x - length];
-                        else
-                            textBoxSlice[x] = (char)205;
-
+                        textBoxSlice[x] = (char)205;
                 }
                 else if (y - TEXTBOX_OFFSET_Y == tHeight - 1)
                 {
@@ -148,14 +161,17 @@ void draw_console()
                         textBoxSlice[x] = ' ';
                 }
             }
-            printf_color(textBoxSlice, COLOR_WHITE);
+            //printf_color(textBoxSlice, COLOR_WHITE);
+            str_append(&TUIBody, textBoxSlice);
             free(textBoxSlice);
         }
 
-        printf("\n");
+        str_append(&TUIBody, linebreak);
     }
+    printf(TUIBody.chars);
+    printf(ANSI_NORMAL);
 
-    for (int i = 0; i < tWidth + (vWidth + 1) * 2 + 2 + TEXTBOX_OFFSET_X*2; i++)
+    for (int i = 0; i < tWidth + (vWidth + 1) * 2 + 2 + TEXTBOX_OFFSET_X * 2; i++)
     {
         if (i == 0 || i == (vWidth) * 2 + 1)
             printf("%c", 202);
@@ -167,6 +183,7 @@ void draw_console()
     {
         printf("[%d] %s\n", i, commands.items[i].descriptionText);
     }
+    str_free(&TUIBody);
 }
 
 void write_to_textbox(char* text)
@@ -182,41 +199,7 @@ void append_console_command(void* action, char* description)
     vec_append(&commands, &cmd, 1);
 }
 
-#ifdef __linux__
 void clear()
 {
-    // CSI[2J clears screen, CSI[H moves the cursor to top-left corner
-    std::cout << "\x1B[2J\x1B[H";
+    printf("\033c");
 }
-#elif _WIN32
-void clear()
-{
-    COORD topLeft = {0, 0};
-    HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
-    CONSOLE_SCREEN_BUFFER_INFO screen;
-    DWORD written;
-
-    GetConsoleScreenBufferInfo(console, &screen);
-    FillConsoleOutputCharacterA(
-        console, ' ', screen.dwSize.X * screen.dwSize.Y, topLeft, &written
-        );
-    FillConsoleOutputAttribute(
-        console, FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_BLUE,
-        screen.dwSize.X * screen.dwSize.Y, topLeft, &written
-        );
-    SetConsoleCursorPosition(console, topLeft);
-}
-
-void printf_color(char* string, int colorId)
-{
-    HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
-    switch (colorId)
-    {
-        default:
-            SetConsoleTextAttribute(console, colorId);
-            printf(string);
-            break;
-    }
-    SetConsoleTextAttribute(console, COLOR_WHITE);
-}
-#endif

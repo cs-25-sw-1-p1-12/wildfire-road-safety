@@ -1,11 +1,13 @@
 #include "map/map.h"
 #include "models/road.h"
 #include "risk/risk.h"
+#include "visual/visual.h"
 
 #include <stdio.h>
 
 int main()
 {
+    init_console();
     // Bbox for area around Cassiopeia
     BoundBox bbox = (BoundBox){
         .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},

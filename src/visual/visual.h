@@ -19,4 +19,5 @@ void write_to_textbox(char*);
 
 void append_console_command(void* action, char* description);
 
+void init_console();
 #endif
