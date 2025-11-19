@@ -1,7 +1,10 @@
 #include "visual.h"
 #include "../dyn.h"
+#include "../models/geo.h"
 
+#include <math.h>
 #include <pthread.h>
+#include <stdbool.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -9,6 +12,7 @@
 
 //https://stackoverflow.com/questions/6486289/how-to-clear-the-console-in-c
 //https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
+//https://stackoverflow.com/questions/917783/how-do-i-work-with-dynamic-multi-dimensional-arrays-in-c
 
 #define ANSI_RED "\033[31m"
 #define ANSI_GREEN "\033[32m"
@@ -97,6 +101,47 @@ void printf_color(char* text, char* color)
     printf("%s%s%s", color, text, ANSI_NORMAL);
 }
 
+BoundBox globalBounds = (BoundBox){
+    .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
+    .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
+};
+
+BOOL local_pos_is_on_road(LCoord coord)
+{
+    /*
+    for (int i = 0; i < current_roads.len; i++)
+    {
+        NodeSlice nodes = current_roads.items[i].nodes;
+
+        for (int nodeI = 1; nodeI < nodes.len; nodeI++)
+        {
+            LCoord coord1 = global_to_local(nodes.items[nodeI - 1].coords, globalBounds, vHeight,
+                                            vWidth);
+            LCoord coord2 = global_to_local(nodes.items[nodeI - 1].coords, globalBounds, vHeight,
+                                            vWidth);
+
+            Vec2 v1_1 = {coord.x - coord1.x, coord.y - coord1.y};
+            Vec2 v1_2 = {coord2.x - coord1.x, coord2.y - coord1.y};
+            double v1_1len = sqrtl(v1_1.x * v1_1.x + v1_1.y * v1_1.y);
+            double v1_2len = sqrtl(v1_2.x * v1_2.x + v1_2.y * v1_2.y);
+            double angle1 = acos((v1_1.x * v1_2.x + v1_1.y * v1_2.y) / (v1_1len * v1_2len));
+
+            Vec2 v2_1 = {coord.x - coord2.x, coord.y - coord2.y};
+            Vec2 v2_2 = {coord1.x - coord2.x, coord1.y - coord2.y};
+            double v2_1len = sqrtl(v2_1.x * v2_1.x + v2_1.y * v2_1.y);
+            double v2_2len = sqrtl(v2_2.x * v2_2.x + v2_2.y * v2_2.y);
+            double angle2 = acos((v2_1.x * v2_2.x + v2_1.y * v2_2.y) / (v2_1len * v2_2len));
+
+            if (angle1 <= 90 && angle2 <= 90)
+            {
+                double dst = fabs(v1_2.x * coord.x + v1_2.y * coord.y) / v1_2len;
+                if (dst <= 0.5f) return TRUE;
+            }
+        }
+    }
+    */
+    return FALSE;
+}
 
 void draw_grid()
 {
@@ -105,17 +150,20 @@ void draw_grid()
     String gridContent = str_from("");
     printf("\033[2;2H");
 
-    for (int i = 0; i < current_roads.len; i++)
-    {
-        NodeSlice nodes = current_roads.items[0].nodes;
-    }
 
     char* ANSI_CODE = ANSI_NORMAL;
     for (int y = 0; y < vHeight; y++)
     {
         for (int x = 0; x < vWidth; x++)
         {
-            if (strcmp(ANSI_CODE, ANSI_GREEN) != 0)
+            LCoord lCoord = {x, y};
+            BOOL isRoad = local_pos_is_on_road(lCoord);
+            if (isRoad && strcmp(ANSI_CODE, ANSI_BLUE) != 0)
+            {
+                str_append(&gridContent, ANSI_BLUE);
+                ANSI_CODE = ANSI_BLUE;
+            }
+            if (isRoad == false && strcmp(ANSI_CODE, ANSI_GREEN) != 0)
             {
                 str_append(&gridContent, ANSI_GREEN);
                 ANSI_CODE = ANSI_GREEN;
