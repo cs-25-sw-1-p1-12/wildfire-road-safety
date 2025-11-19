@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 bool parse_string(JsonLexer* lex, JsonToken* token);
@@ -16,8 +17,14 @@ JsonToken json_lexer_next(JsonLexer* lex)
 {
     JsonToken token = (JsonToken){.tag = JSON_EOF};
 
+    size_t old_idx = 0;
     while (lex->idx < strlen(lex->buf))
     {
+        if (lex->idx != 0 && lex->idx == old_idx)
+            printf("INFI LOOP IN LEXER!!\n");
+
+        old_idx = lex->idx;
+
         char ch = lex->buf[lex->idx];
 
         if (is_whitespace(ch))
@@ -111,10 +118,10 @@ bool parse_string(JsonLexer* lex, JsonToken* token)
         if (ch == '\\')
         {
             // Skip the '\'
-            lex->idx++;
+            idx++;
             str_push(&buf, lex->buf[idx]);
             // skip next char
-            lex->idx++;
+            idx++;
             continue;
         }
 
@@ -165,9 +172,15 @@ bool parse_numerical(JsonLexer* lex, JsonToken* token)
 {
     String buf = {0};
 
+    size_t old_idx = 0;
+
     size_t idx = lex->idx;
     while (idx < strlen(lex->buf))
     {
+        if (idx == old_idx)
+            printf("INFI LOOP IN NUMBER PARSER!!!\n");
+        old_idx = idx;
+
         char ch = lex->buf[idx];
 
         if (is_whitespace(ch) || ch == ',')
@@ -248,8 +261,9 @@ bool is_whitespace(char ch)
 
 size_t skip_whitespace(char* input, size_t idx)
 {
+    size_t len = strlen(input);
     size_t i = idx;
-    while (is_whitespace(input[i]))
+    while (i < len && is_whitespace(input[i]))
         i++;
 
     return i;

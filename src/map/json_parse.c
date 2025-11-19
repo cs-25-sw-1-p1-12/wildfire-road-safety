@@ -46,12 +46,21 @@ bool parse(char* input, RoadSegSlice* road_buf)
 
     // skip to the node list
     JsonToken tok = {0};
-    while (tok.tag != JSON_OPEN_LIST)
+
+    while (tok.tag != JSON_OPEN_LIST && tok.tag != JSON_EOF)
         tok = json_lexer_next(&lex);
 
+    printf("Starting parsing!\n");
+    size_t old_idx = 0;
     while (lex.idx < strlen(lex.buf))
     {
+        if (lex.idx != 0 && lex.idx == old_idx)
+            printf("INFI LOOP IN PARSER!!!\n");
+
+        old_idx = lex.idx;
+
         JsonToken tok = json_lexer_next(&lex);
+
         if (tok.tag == JSON_CLOSE_LIST)
             break;
 
@@ -115,7 +124,6 @@ bool parse(char* input, RoadSegSlice* road_buf)
         }
         else if (strcmp(tok.string_val, "way") == 0)
         {
-            // ID
             tok = json_lexer_next(&lex);
             expect_token(tok, JSON_KEY);
             assert(strcmp(tok.key, "id") == 0 && "Expected \"id\" key in json-object");
@@ -133,9 +141,13 @@ bool parse(char* input, RoadSegSlice* road_buf)
             json_token_free(tok);
             expect_token_and_free(json_lexer_next(&lex), JSON_OPEN_LIST);
 
+            size_t old_node_idx = 0;
             NodeVec inner_nodes = {0};
             while (tok.tag != JSON_CLOSE_LIST)
             {
+                if (lex.idx == old_node_idx)
+                    printf("INFI LOOP IN INNER_NODES!!");
+
                 tok = json_lexer_next(&lex);
                 if (tok.tag == JSON_CLOSE_LIST)
                     break;
@@ -229,8 +241,12 @@ void skip_object(JsonLexer* lex)
     // Assuming that the first { has been consumed
     uint32_t bracket_balance = 1;
 
+    size_t old_idx = 0;
     while (bracket_balance > 0)
     {
+        if (lex->idx == old_idx)
+            printf("INFI LOOP IN SKIP OBJECT!!");
+
         JsonToken tok = json_lexer_next(lex);
 
         if (tok.tag == JSON_OPEN_OBJ)
