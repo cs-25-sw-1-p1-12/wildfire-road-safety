@@ -31,26 +31,52 @@
 219:█
  */
 
+//dyn.h lacks a function to only append char instead of a whole string/char*
+//So these are here for that purpose.
+const char tlCorner[2] = {(char)201, '\0'}; //╔
+const char verticalLine[2] = {(char)186, '\0'}; //║
+const char trCorner[2] = {(char)187, '\0'}; //╗
+const char upT[2] = {(char)202, '\0'};
+const char horizontalLine[2] = {(char)205, '\0'};
+const char* linebreak = "\n"; //line break
+
+//These const exist due to some issue with Clion not interpreting them as actual numbers.
+const int vHeight = VIEWPORT_HEIGHT;
+const int tHeight = TEXTBOX_HEIGHT;
+const int vWidth = VIEWPORT_WIDTH;
+const int tWidth = TEXTBOX_WIDTH;
+const int height = (tHeight > vHeight) ? tHeight : vHeight;
+
+unsigned int selectedCmd = 0;
+RoadSegSlice current_roads;
+FireSlice current_fires;
+
 typedef struct
 {
     void (*triggerAction)();
     char* descriptionText;
 } ConsoleCommands;
 
-StrSlice textBoxText;
+String textBoxText;
 VecDef(ConsoleCommands) commands;
 
 void clear();
-void printf_color(char* string, int colorId);
+void draw_grid();
+void draw_outline(int line, int column, int height, int width, char* title, OutlineCorners corners);
 
 void init_console()
 {
+    textBoxText = str_from("");
 #ifdef _WIN32
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
     SetConsoleMode(hInput, ENABLE_VIRTUAL_TERMINAL_INPUT);
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+
+    HWND windowHandle = GetConsoleWindow();
+    ShowWindow(windowHandle, 3);
 #endif
+    printf("\e[?25h");
 }
 
 void make_white_space(String* string, int amount)
@@ -61,22 +87,143 @@ void make_white_space(String* string, int amount)
     str_append(string, whiteSpace);
 }
 
-const char tlCorner[2] = {(char)201, '\0'}; //╔
-const char verticalLine[2] = {(char)186, '\0'}; //║
-const char trCorner[2] = {(char)187, '\0'}; //╗
-const char* linebreak = "\n"; //line break
+void printf_color(char* text, char* color)
+{
+    if ((int)text[0] != 27)
+    {
+        printf("\033[38;5;212m%s%s", text, ANSI_NORMAL);
+        return;
+    }
+    printf("%s%s%s", color, text, ANSI_NORMAL);
+}
 
-const int vHeight = VIEWPORT_HEIGHT;
-const int tHeight = TEXTBOX_HEIGHT;
-const int vWidth = VIEWPORT_WIDTH;
-const int tWidth = TEXTBOX_WIDTH;
-const int height = (tHeight > vHeight) ? tHeight : vHeight;
 
-unsigned int selectedCmd = 0;
+void draw_grid()
+{
+    printf("\e[?25l");
+    //printf("\e[s");
+    String gridContent = str_from("");
+    printf("\033[2;2H");
+
+    for (int i = 0; i < current_roads.len; i++)
+    {
+        NodeSlice nodes = current_roads.items[0].nodes;
+    }
+
+    char* ANSI_CODE = ANSI_NORMAL;
+    for (int y = 0; y < vHeight; y++)
+    {
+        for (int x = 0; x < vWidth; x++)
+        {
+            if (strcmp(ANSI_CODE, ANSI_GREEN) != 0)
+            {
+                str_append(&gridContent, ANSI_GREEN);
+                ANSI_CODE = ANSI_GREEN;
+            }
+            char blocks[3] = {(char)219, (char)219, '\0'};
+            str_append(&gridContent, blocks);
+        }
+        str_append(&gridContent, "\033[1E");
+        str_append(&gridContent, "\033[1C");
+    }
+    str_append(&gridContent, ANSI_NORMAL);
+    printf(gridContent.chars);
+    str_free(&gridContent);
+    // printf("\e[u");
+    printf("\e[?25h");
+}
+
+void draw_text(char* text, int line, int column, int height, int width)
+{
+    char offsetPos[1000];
+    sprintf(offsetPos, "\033[%d;%dH", line, column);
+    String textBox = str_from(offsetPos);
+    String stringText = str_from(text);
+
+    char newline[1000] = "\033[1E";
+    if (column > 1)
+        sprintf(newline, "\033[1E\033[%dC", column - 1);
+    for (int i = 0; i < min(stringText.len, height * width); i++)
+    {
+        char c[2] = {stringText.chars[i], '\0'};
+        str_append(&textBox, c);
+        int currentLineWidth = i % width;
+        if (currentLineWidth == width - 1)
+        {
+            str_append(&textBox, newline);
+        }
+    }
+    printf(textBox.chars);
+    str_free(&textBox);
+    str_free(&stringText);
+}
+
+void draw_horizontal_outline(String* string, int line, int column, int width, char* title)
+{
+    String headerText = str_from(title);
+    char gridMapSlice[width + 1];
+    int length = (width - 2) / 2 - ((headerText.len) / 2);
+
+    char text[1000];
+    sprintf(text, "\033[%d;%dH", line, column);
+    str_append(string, text);
+    for (int x = 0; x < width; ++x)
+    {
+        if (x >= length && x < length + headerText.len)
+            gridMapSlice[x] = headerText.chars[x - length];
+        else
+            gridMapSlice[x] = (char)205;
+    }
+    gridMapSlice[width] = '\0';
+    str_append(string, gridMapSlice);
+}
+
+void draw_outline(int line, int column, int height, int width, char* title, OutlineCorners corners)
+{
+    const char tlCorner[2] = {corners.topLeft, '\0'};
+    const char trCorner[2] = {corners.topRight, '\0'};
+    const char blCorner[2] = {corners.bottomLeft, '\0'};
+    const char brCorner[2] = {corners.bottomRight, '\0'};
+    char offsetPos[1000];
+    sprintf(offsetPos, "\033[%d;%dH", line, column);
+
+    String gridOutline = str_from(offsetPos);
+
+    str_append(&gridOutline, tlCorner);
+    draw_horizontal_outline(&gridOutline, line, column + 1, width, title);
+    str_append(&gridOutline, trCorner);
+
+    char text[1000];
+    sprintf(text, "\033[%dC", width);
+
+    char newline[1000] = "\033[1E";
+    if (column > 1)
+        sprintf(newline, "\033[1E\033[%dC", column - 1);
+    for (int x = 0; x < height; x++)
+    {
+        str_append(&gridOutline, newline);
+        str_append(&gridOutline, verticalLine);
+        str_append(&gridOutline, text);
+        str_append(&gridOutline, verticalLine);
+
+        //DEBUG LINE NUMBER DISPLAY
+        // char num[1000];
+        // sprintf(num, " - %d", x + 1);
+        // str_append(&gridOutline, num);
+    }
+
+    str_append(&gridOutline, newline);
+    str_append(&gridOutline, blCorner);
+    draw_horizontal_outline(&gridOutline, line + height + 1, column + 1, width, "");
+    str_append(&gridOutline, brCorner);
+    printf(gridOutline.chars);
+    str_free(&gridOutline);
+}
 
 void draw_cmd()
 {
     printf("\e[?25l");
+    printf("\033[%d;0H", height + 3);
     for (int i = 0; i < commands.len; i++)
     {
         if (selectedCmd == i)
@@ -87,6 +234,7 @@ void draw_cmd()
     }
     printf("\e[?25h");
 }
+
 void draw_console()
 {
     printf("\e[?25l");
@@ -96,122 +244,46 @@ void draw_console()
     clear();
     int textRead = 0;
 
-    String TUIBody = str_from(ANSI_NORMAL);
-    for (int y = 0; y < height; y++)
-    {
-        if (y < vHeight + 1)
-        {
-            str_append(&TUIBody, ANSI_NORMAL);
-            if (y == 0)
-                str_append(&TUIBody, tlCorner);
-            else
-                str_append(&TUIBody, verticalLine);
+    const OutlineCorners gridCorners = {(char)201, (char)187, (char)202, (char)202};
+    draw_outline(1, 1, vHeight, vWidth * 2, "MAP", gridCorners);
+    draw_grid();
 
-            char* gridMapSlice = calloc(VIEWPORT_WIDTH * 2 + 1, sizeof(char));
-            if (y == 0)
-            {
-                str_append(&TUIBody, ANSI_NORMAL);
-                char headerText[] = "MAP";
-                int length = (VIEWPORT_WIDTH * 2 - 2) / 2 - ((sizeof(headerText) - 1) / 2);
-                for (int x = 0; x < VIEWPORT_WIDTH * 2; ++x)
-                {
-                    if (x >= length && x < length + sizeof(headerText) - 1)
-                        gridMapSlice[x] = headerText[x - length];
-                    else
-                        gridMapSlice[x] = (char)205;
-                }
-                // printf_color(gridMapSlice, COLOR_WHITE);
-            }
-            else
-            {
-                str_append(&TUIBody, ANSI_GREEN);
-                for (int x = 0; x < VIEWPORT_WIDTH; ++x)
-                {
-                    gridMapSlice[x * 2 + 1] = (char)219;
-                    gridMapSlice[x * 2] = (char)219;
-                }
-                // printf_color(gridMapSlice, COLOR_GREEN);
-            }
-            str_append(&TUIBody, gridMapSlice);
+    const OutlineCorners textboxCorners = {(char)201, (char)187, (char)200, (char)188};
+    draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight, tWidth,
+                 "MESSAGE BOX",
+                 textboxCorners);
+    draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight,
+              tWidth);
 
-            free(gridMapSlice);
-            str_append(&TUIBody, ANSI_NORMAL);
-            if (y == 0)
-                str_append(&TUIBody, trCorner);
-            else
-                str_append(&TUIBody, verticalLine);
-        }
-        else
-        {
-            make_white_space(&TUIBody, VIEWPORT_WIDTH + 5 + 1);
-        }
-
-        make_white_space(&TUIBody, TEXTBOX_OFFSET_X);
-        if (y - TEXTBOX_OFFSET_Y < tHeight && y >= TEXTBOX_OFFSET_Y)
-        {
-            char* textBoxSlice = calloc(tWidth, sizeof(char));
-            for (int x = 0; x < tWidth; x++)
-            {
-                if (y - TEXTBOX_OFFSET_Y == 0)
-                {
-                    char headerText[] = "MESSAGE BOX";
-                    int length = tWidth / 2 - ((sizeof(headerText) - 1) / 2);
-                    if (x == 0 || x >= tWidth - 1)
-                        textBoxSlice[x] = x < tWidth - 1 ? (char)201 : (char)187;
-                    else if (x >= length && x < length + sizeof(headerText) - 1)
-                        textBoxSlice[x] = headerText[x - length];
-                    else
-                        textBoxSlice[x] = (char)205;
-                }
-                else if (y - TEXTBOX_OFFSET_Y == tHeight - 1)
-                {
-                    if (x == 0 || x >= tWidth - 1)
-                        textBoxSlice[x] = x < tWidth - 1 ? (char)200 : (char)188;
-                    else
-                        textBoxSlice[x] = (char)205;
-                }
-                else if (x == 0 || x >= tWidth - 1)
-                    textBoxSlice[x] = (char)186;
-                else
-                {
-                    //ACTUALLY WRITE
-                    if (textRead < textBoxText.len)
-                    {
-                        textBoxSlice[x] = textBoxText.chars[textRead];
-                        textRead++;
-                    }
-                    else
-                        textBoxSlice[x] = ' ';
-                }
-            }
-            //printf_color(textBoxSlice, COLOR_WHITE);
-            str_append(&TUIBody, textBoxSlice);
-            free(textBoxSlice);
-        }
-
-        str_append(&TUIBody, linebreak);
-    }
-    printf(TUIBody.chars);
-    printf(ANSI_NORMAL);
-
-    for (int i = 0; i < tWidth + (vWidth + 1) * 2 + 2 + TEXTBOX_OFFSET_X * 2; i++)
-    {
-        if (i == 0 || i == (vWidth) * 2 + 1)
-            printf("%c", 202);
-        else
-            printf("%c", 205);
-    }
-    printf("\n");
+    String horiLine = str_from("");
+    draw_horizontal_outline(&horiLine, height + 2, vWidth * 2 + 3,
+                            TEXTBOX_OFFSET_X * 2 + tWidth + 3, "");
+    printf(horiLine.chars);
+    str_free(&horiLine);
+    // for (int i = 0; i < tWidth + (vWidth + 1) * 2 + 2 + TEXTBOX_OFFSET_X * 2; i++)
+    // {
+    //     if (i == 0 || i == (vWidth) * 2 + 1)
+    //         printf("%c", 202);
+    //     else
+    //         printf("%c", 205);
+    // }
+    // printf("\n");
     draw_cmd();
-    str_free(&TUIBody);
     printf("\e[?25h");
+}
+
+void draw_current_state(RoadSegSlice roads, FireSlice fires)
+{
+    current_roads = roads;
+    current_fires = fires;
+    draw_console();
 }
 
 void write_to_textbox(char* text)
 {
-    str_slice_free(&textBoxText);
-    textBoxText = str_slice_from(text);
-    draw_console();
+    textBoxText = str_from(text);
+    draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight,
+              tWidth);
 }
 
 void append_console_command(void (*action), char* description)
@@ -219,6 +291,7 @@ void append_console_command(void (*action), char* description)
     const ConsoleCommands cmd = {action, description};
     vec_append(&commands, &cmd, 1);
 }
+
 void execute_command()
 {
     printf("\e[?25l");
