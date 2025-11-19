@@ -53,7 +53,10 @@ size_t str_write(void* ptr, size_t size, size_t nmemb, String* str)
     return size * nmemb;
 }
 
-#define ROAD_QUERY_FORMAT "[out:json];(way[highway](%lf,%lf,%lf,%lf););(._;>;);out;"
+#define ROAD_QUERY_FORMAT                                                                          \
+    "[out:json];way[highway][\"highway\"!~\"(pedestrian|path|cycleway|footway|street_lamp|steps)"  \
+    "\"][\"service\"!~\"(parking_aisle|driveway)\"][\"access\"!~\"private\"](%lf,%lf,%lf,%lf);(._" \
+    ";>;);out;"
 
 #define VEGETATION_QUERY_FORMAT                                                                    \
     "[bbox:(%lf,%lf,%lf,%lf)][out:json];(nwr[natural];nwr[landuse];nwr[leisure];nwr[wetland];);(." \

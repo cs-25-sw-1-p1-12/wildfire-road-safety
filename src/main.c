@@ -17,7 +17,7 @@ int main()
     // Bbox for area around Cassiopeia
     BoundBox bbox = (BoundBox){
         .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
-        .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
+        .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
     };
 
     RoadSegSlice roads = {0};
@@ -36,19 +36,15 @@ int main()
     tempFires.len = 2;
 
     tempFires.items[0] = (FireArea){
-        .bbox = (BoundBox){
-            .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
-            .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
-        },
+        .bbox = (BoundBox){.c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
+                           .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}},
         .spread_delta = 0.3,
         .temperature = 326
     };
 
     tempFires.items[1] = (FireArea){
-        .bbox = (BoundBox){
-            .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
-            .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
-        },
+        .bbox = (BoundBox){.c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
+                           .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}},
         .spread_delta = 0.7,
         .temperature = 402
     };

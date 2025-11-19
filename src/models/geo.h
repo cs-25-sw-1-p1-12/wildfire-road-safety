@@ -29,6 +29,12 @@ typedef struct
 
 LCoord global_to_local(GCoord gcoord, BoundBox bbox, size_t height, size_t width);
 
+/// Get a bbox around a global coordinate.
+/// The global coordinate will be the center of the bbox.
+/// The width and height are the total width and height of the new bbox, and is in the unit
+/// kilometers.
+BoundBox bbox_from_coord(GCoord gcoord, double width_km, double height_km);
+
 void print_local(LCoord local);
 
 #endif // GEO_H
