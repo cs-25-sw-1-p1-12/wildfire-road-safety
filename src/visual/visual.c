@@ -68,19 +68,39 @@ void clear();
 void draw_grid();
 void draw_outline(int line, int column, int height, int width, char* title, OutlineCorners corners);
 
+
+#ifdef _WIN32
+DWORD defaultConsoleSettingsInput;
+DWORD defaultConsoleSettingsOutput;
+
+#endif
 void init_console()
 {
     textBoxText = str_from("");
 #ifdef _WIN32
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    GetConsoleMode(hInput, &defaultConsoleSettingsInput);
     SetConsoleMode(hInput, ENABLE_VIRTUAL_TERMINAL_INPUT);
+
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleMode(hOutput, &defaultConsoleSettingsOutput);
     SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 
     HWND windowHandle = GetConsoleWindow();
     ShowWindow(windowHandle, 3);
 #endif
     printf("\e[?25h");
+}
+void close_console()
+{
+    str_free(&textBoxText);
+    vec_free(commands);
+#ifdef _WIN32
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    SetConsoleMode(hInput, defaultConsoleSettingsInput);
+    HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleMode(hOutput, defaultConsoleSettingsOutput);
+#endif
 }
 
 void make_white_space(String* string, int amount)
@@ -108,7 +128,6 @@ BoundBox globalBounds = (BoundBox){
 
 BOOL local_pos_is_on_road(LCoord coord)
 {
-    /*
     for (int i = 0; i < current_roads.len; i++)
     {
         NodeSlice nodes = current_roads.items[i].nodes;
@@ -139,7 +158,6 @@ BOOL local_pos_is_on_road(LCoord coord)
             }
         }
     }
-    */
     return FALSE;
 }
 

@@ -31,6 +31,8 @@ void append_console_command(void* action, char* description);
 
 ///configure the console to accept ANSI codes if it's windows based machine (does nothing if it's other types of OS)
 void init_console();
+///Resets any changes the console could have potentially experienced
+void close_console();
 
 ///This will execute on of the commands added with append_console_command depending on input,
 ///this runs on a separate thread so scan doesn't block the program.
