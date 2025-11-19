@@ -45,6 +45,7 @@ typedef struct
 typedef SliceDef(RoadSeg) RoadSegSlice;
 
 float GetFireDstToRoad(RoadSeg road, FireArea fire);
+void assign_roads(int number_of_roads, RoadSeg road, FireArea fire);
 
 
 #endif // ROAD_DATA_H
