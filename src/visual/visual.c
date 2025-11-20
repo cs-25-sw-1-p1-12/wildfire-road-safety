@@ -161,8 +161,8 @@ void printf_color(char* text, char* color)
 double get_point_dist_to_road(LCoord n1, LCoord n2, LCoord p, double tolerance)
 {
     // Check if in bounding box
-    if (p.x > fmax(n1.x, n2.x) + tolerance || p.x < fmin(n1.x, n2.x) - tolerance ||
-        p.y > fmax(n1.y, n2.y) + tolerance || p.y < fmin(n1.y, n2.y) - tolerance)
+    if (p.x > MAX(n1.x, n2.x) + tolerance || p.x < MIN(n1.x, n2.x) - tolerance ||
+        p.y > MAX(n1.y, n2.y) + tolerance || p.y < MIN(n1.y, n2.y) - tolerance)
         return INFINITY;
 
     // Formula from
@@ -314,7 +314,8 @@ void draw_text(char* text, int line, int column, int height, int width)
     char newline[1000] = "\033[1E";
     if (column > 1)
         sprintf(newline, "\033[1E\033[%dC", column - 1);
-    for (int i = 0; i < min(stringText.len, height * width); i++)
+
+    for (int i = 0; i < MIN(stringText.len, height * width); i++)
     {
         char c[2] = {stringText.chars[i], '\0'};
         str_append(&textBox, c);

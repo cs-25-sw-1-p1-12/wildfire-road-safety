@@ -14,6 +14,9 @@
 #define VEC_START_CAP 10
 #endif
 
+#define MAX(a, b) (a >= b ? a : b)
+#define MIN(a, b) (a <= b ? a : b)
+
 #define VecDef(T)   \
     struct          \
     {               \
