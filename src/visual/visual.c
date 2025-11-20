@@ -5,6 +5,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -92,9 +93,11 @@ DWORD defaultConsoleSettingsInput;
 DWORD defaultConsoleSettingsOutput;
 UINT defaultConsoleOutputType;
 #endif
+LCoord fontSize;
 
 void init_console()
 {
+    // setbuf(stdout, NULL);
     debug_log(MESSAGE, "start initiating console...");
     textBoxText = str_from("");
 #ifdef _WIN32
@@ -111,7 +114,6 @@ void init_console()
 
     HWND windowHandle = GetConsoleWindow();
     ShowWindow(windowHandle, SW_SHOWMAXIMIZED);
-
 #elif __linux__
 
 #endif
@@ -139,6 +141,24 @@ void close_console()
     debug_log(MESSAGE, "Done!");
 }
 
+
+void fast_print(const char* format)
+{
+    fwrite(format, strlen(format), 1, stdout);
+}
+
+void fast_print_args(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    char textBuffer[strlen(format) + 100];
+    int amountWritten = vsprintf(textBuffer, format, args);
+    char text[amountWritten + 1];
+    mempcpy(text, textBuffer, sizeof(text));
+    va_end(args);
+    fast_print(text);
+}
+
 BoundBox globalBounds = (BoundBox){
     .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
     .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
@@ -147,8 +167,8 @@ BoundBox globalBounds = (BoundBox){
 LCoord get_terminal_size()
 {
     //https://stackoverflow.com/questions/74431114/get-terminal-size-using-ansi-escape-sequences/74432616#74432616
-    printf("\033[s\033[9999;9999H");
-    printf("\033[6n");
+    fast_print("\033[s\033[9999;9999H");
+    fast_print("\033[6n");
     const int c = getchar();
     if (c == 27)
     {
@@ -158,7 +178,7 @@ LCoord get_terminal_size()
         scanf("[%d;%d", &line, &column);
         return (LCoord){.x = column, .y = line};
     }
-    printf("\033[u");
+    fast_print("\033[u");
     return (LCoord){.x = 0, .y = 0};
 }
 
@@ -186,10 +206,10 @@ void printf_color(char* text, char* color)
 {
     if ((int)text[0] != 27)
     {
-        printf("\033[38;5;212m%s%s", text, ANSI_NORMAL);
+        fast_print_args("\033[38;5;212m%s%s", text, ANSI_NORMAL);
         return;
     }
-    printf("%s%s%s", color, text, ANSI_NORMAL);
+    fast_print_args("%s%s%s", color, text, ANSI_NORMAL);
 }
 
 double get_point_dist_to_road(LCoord n1, LCoord n2, LCoord p, double tolerance)
@@ -273,27 +293,6 @@ bool local_pos_is_on_road(LCoord coord)
                 if (dst <= 0.5f)
                     return true;
             }
-            continue;
-            Vec2 v2_1 = {
-                (double)coord.x - (double)coord2.x,
-                (double)coord.y - (double)coord2.y
-            };
-            Vec2 v2_2 = {
-                (double)coord1.x - (double)coord2.x,
-                (double)coord1.y - (double)coord2.y
-            };
-            double v2_1len = sqrtl(v2_1.x * v2_1.x + v2_1.y * v2_1.y);
-            double v2_2len = sqrtl(v2_2.x * v2_2.x + v2_2.y * v2_2.y);
-            double cosVal = (v2_1.x * v2_2.y + v2_1.y * v2_2.x) / (v2_1len * v2_2len);
-            double angle2 = acos(cosVal);
-
-            if (angle1 <= M_PI / 2 && angle2 <= M_PI / 2)
-            {
-                double cross = v1_2.x * v1_1.y - v1_2.y * v1_1.x;
-                double dst = fabs(cross / sqrt(pow(v1_2.x, 2) * pow(v1_2.y, 2)));
-                if (dst <= 0.5f)
-                    return true;
-            }
         }
     }
     return false;
@@ -302,12 +301,13 @@ bool local_pos_is_on_road(LCoord coord)
 
 void draw_grid()
 {
-    printf("\e[?25l");
+    fast_print("\e[?25l");
     //printf("\e[s");
     String gridContent = str_from("");
-    printf("\033[2;2H");
+    fast_print("\033[2;2H");
 
-
+    int greenCount = 0;
+    int blueCount = 0;
     const char* ANSI_CODE = ANSI_NORMAL;
     for (int y = 0; y < vHeight; y++)
     {
@@ -317,11 +317,13 @@ void draw_grid()
             const bool isRoad = road_has_road_at(current_roads, lCoord, 0.5);
             if (isRoad == false && strcmp(ANSI_CODE, ANSI_GREEN) != 0)
             {
+                greenCount++;
                 str_append(&gridContent, ANSI_GREEN);
                 ANSI_CODE = ANSI_GREEN;
             }
             if (isRoad == true && strcmp(ANSI_CODE, ANSI_BLUE) != 0)
             {
+                blueCount++;
                 str_append(&gridContent, ANSI_BLUE);
                 ANSI_CODE = ANSI_BLUE;
             }
@@ -332,10 +334,12 @@ void draw_grid()
         str_append(&gridContent, "\033[1C");
     }
     str_append(&gridContent, ANSI_NORMAL);
-    printf(gridContent.chars);
+    fast_print(gridContent.chars);
+    debug_log(MESSAGE, "green: %d, blue: %d, total grid size: %d", greenCount, blueCount,
+              vWidth * 2 * vHeight);
     str_free(&gridContent);
     // printf("\e[u");
-    printf("\e[?25h");
+    fast_print("\e[?25h");
 }
 
 void draw_text(char* text, int line, int column, int height, int width)
@@ -359,7 +363,7 @@ void draw_text(char* text, int line, int column, int height, int width)
             str_append(&textBox, newline);
         }
     }
-    printf(textBox.chars);
+    fast_print(textBox.chars);
     str_free(&textBox);
     str_free(&stringText);
 }
@@ -416,54 +420,49 @@ void draw_outline(int line, int column, int height, int width, char* title, Outl
     str_append(&gridOutline, corners.bottomLeft);
     draw_horizontal_outline(&gridOutline, line + height + 1, column + 1, width, "");
     str_append(&gridOutline, corners.bottomRight);
-    printf(gridOutline.chars);
+    fast_print(gridOutline.chars);
     str_free(&gridOutline);
 }
 
 void draw_cmd()
 {
-    printf("\e[?25l");
-    printf("\033[%d;0H", height + 3);
+    fast_print("\e[?25l");
+    fast_print_args("\033[%d;0H", height + 3);
     for (int i = 0; i < commands.len; i++)
     {
         if (selectedCmd == i)
-            printf(ANSI_BLUE);
-        printf("[%d] %s\n", i, commands.items[i].descriptionText);
+            fast_print(ANSI_BLUE);
+        fast_print_args("\033[0K[%d] %s\n", i, commands.items[i].descriptionText);
         if (selectedCmd == i)
-            printf(ANSI_NORMAL);
+            fast_print(ANSI_NORMAL);
     }
-    printf("\e[?25h");
+    fast_print("\e[?25h");
 }
 
 void draw_console()
 {
-    printf(
-        "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST SLOW)",
-        ANSI_NORMAL);
+    fast_print_args(" ");
+    // fast_print_args(
+    //     "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST SLOW)",
+    //     ANSI_NORMAL);
     clear();
-    printf("\e[?25l");
-    int textRead = 0;
-
+    fast_print("\e[?25l");
     const OutlineCorners gridCorners = {TL_CORNER, TR_CORNER, BL_CORNER, UP_T_JUNC};
     draw_outline(1, 1, vHeight, vWidth * 2, "MAP", gridCorners);
-    // printf("\e[?25l");
     const OutlineCorners textboxCorners = {TL_CORNER, TR_CORNER, BL_CORNER, BR_CORNER};
     draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X, tHeight, tWidth,
                  "MESSAGE BOX",
                  textboxCorners);
-    // printf("\e[?25l");
     draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight,
               tWidth);
-    // printf("\e[?25l");
-
     String horiLine = str_from("");
-    draw_horizontal_outline(&horiLine, height + 2, vWidth * 2 + 3,
-                            TEXTBOX_OFFSET_X * 2 + tWidth + 3, "");
-    printf(horiLine.chars);
+    LCoord size = get_terminal_size();
+    draw_horizontal_outline(&horiLine, height + 2, vWidth * 2 + 3, size.x - (vWidth * 2 + 3), "");
+    fast_print(horiLine.chars);
     str_free(&horiLine);
     draw_grid();
     draw_cmd();
-    printf("\e[?25h");
+    fast_print("\e[?25h");
 }
 
 void draw_current_state(RoadSegSlice roads, FireSlice fires)
@@ -488,17 +487,17 @@ void append_console_command(void (*action), char* description)
 
 void execute_command()
 {
-    printf("\e[?25l");
+    fast_print("\e[?25l");
 
-    printf("\e[?1000;1006;1015h");
+    fast_print("\e[?1000;1006;1015h");
     const int c = getchar();
-    printf("\e[?1000;1006;1015l");
+    fast_print("\e[?1000;1006;1015l");
     if (c == 27)
     {
         // printf("\e[?1000;1006;1015l");
         getchar();
         const int nCode = getchar();
-        printf("\33[2K\r");
+        fast_print("\33[2K\r");
 
         if (nCode == 65)
         {
@@ -527,8 +526,10 @@ void execute_command()
                 str_push(&readCmd, c);
                 if (c == 'm' || c == 'M')
                     break;
-            }
+            };
             sscanf(readCmd.chars, "0;%d;%d", &mouseX, &mouseY);
+            // printf(readCmd.chars);
+            // printf("(x: %d, y: %d)", mouseX, mouseY);
             int potIndex = mouseY - (height + 3);
             if (potIndex >= 0 && potIndex < commands.len)
             {
@@ -551,23 +552,24 @@ void execute_command()
             {
                 mouseY = MIN(mouseY, vHeight);
                 mouseX = MIN(mouseX+2, vWidth*2) / 2;
-                printf("that's inside the grid! (x: %d, y: %d)", mouseX, mouseY);
+                //fast_print_args("that's inside the grid! (x: %d, y: %d)", mouseX, mouseY);
             }
+            str_free(&readCmd);
         }
 
         for (int i = 0; i < commands.len; i++)
-            printf("\033[A\33[2K\r");
+            fast_print("\033[A\33[2K\r");
         draw_cmd();
     }
     else if (c == 32)
     {
-        printf("\e[?1000;1006;1015l");
+        fast_print("\e[?1000;1006;1015l");
         commands.items[selectedCmd].triggerAction();
     }
-    printf("\e[?25h");
+    fast_print("\e[?25h");
 }
 
 void clear()
 {
-    printf("\033c");
+    fast_print("\033c");
 }
