@@ -7,11 +7,14 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#elif __linux__
+#include <termios.h>
 #endif
 
 //https://stackoverflow.com/questions/6486289/how-to-clear-the-console-in-c
 //https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
 //https://stackoverflow.com/questions/917783/how-do-i-work-with-dynamic-multi-dimensional-arrays-in-c
+//https://www.cs.uleth.ca/~holzmann/C/system/ttyraw.c
 
 #define ANSI_RED "\033[31m"
 #define ANSI_GREEN "\033[32m"
@@ -105,6 +108,8 @@ void init_console()
 
     HWND windowHandle = GetConsoleWindow();
     ShowWindow(windowHandle, 3);
+#elif __linux__
+
 #endif
     printf("\e[?25h");
 }
@@ -120,6 +125,8 @@ void close_console()
     SetConsoleMode(hOutput, defaultConsoleSettingsOutput);
 
     SetConsoleOutputCP(defaultConsoleOutputType);
+#elif __linux__
+
 #endif
 }
 
