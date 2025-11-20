@@ -144,7 +144,7 @@ void make_white_space(String* string, int amount)
 void ANSI_RGB(String* string, int r, int g, int b)
 {
     char rgb[256];
-    sprintf(rgb, "[38;2;%d;%d;%dm", r, g, b);
+    sprintf(rgb, "\033[38;2;%d;%d;%dm", r, g, b);
     str_append(string, rgb);
 }
 
