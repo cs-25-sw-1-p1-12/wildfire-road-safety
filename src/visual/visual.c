@@ -141,6 +141,13 @@ void make_white_space(String* string, int amount)
     str_append(string, whiteSpace);
 }
 
+void ANSI_RGB(String* string, int r, int g, int b)
+{
+    char rgb[256];
+    sprintf(rgb, "[38;2;%d;%d;%dm", r, g, b);
+    str_append(string, rgb);
+}
+
 void printf_color(char* text, char* color)
 {
     if ((int)text[0] != 27)
@@ -267,22 +274,19 @@ void draw_grid()
     printf("\033[2;2H");
 
 
-    char* ANSI_CODE = ANSI_NORMAL;
+    const char* ANSI_CODE = ANSI_NORMAL;
     for (int y = 0; y < vHeight; y++)
     {
         for (int x = 0; x < vWidth; x++)
         {
-            LCoord lCoord;
-            lCoord.x = x;
-            lCoord.y = y;
-            BOOL isRoad = road_has_road_at(current_roads, lCoord, 0.5);;
-            //local_pos_is_on_road(lCoord);
-            if (isRoad == false)
+            const LCoord lCoord = (LCoord){.x = x, .y = y};
+            const bool isRoad = road_has_road_at(current_roads, lCoord, 0.5);
+            if (isRoad == false && strcmp(ANSI_CODE, ANSI_GREEN) != 0)
             {
                 str_append(&gridContent, ANSI_GREEN);
                 ANSI_CODE = ANSI_GREEN;
             }
-            else
+            if (isRoad == true && strcmp(ANSI_CODE, ANSI_BLUE) != 0)
             {
                 str_append(&gridContent, ANSI_BLUE);
                 ANSI_CODE = ANSI_BLUE;

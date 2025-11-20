@@ -33,7 +33,7 @@ void run_simulation()
     }
     pthread_join(stopCheckThread, NULL);
     printf("SIM STOPPED!");
-    sleep(1000);
+    sleep(1);
     draw_console();
 }
 
