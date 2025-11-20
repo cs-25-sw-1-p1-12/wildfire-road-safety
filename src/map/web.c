@@ -22,11 +22,14 @@ int send_overpass_request(String* output, char* url, OverpassData data_type, Bou
 
     curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, str_write);
     curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, output);
+    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0);
 
     CURLcode res = curl_easy_perform(curl_handle);
-
     if (res != CURLE_OK)
+    {
+        output->chars = (char*)curl_easy_strerror(res);
         return -1;
+    }
 
     long ret_code;
     curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &ret_code);

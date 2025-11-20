@@ -1,6 +1,5 @@
 #include "visual.h"
 #include "../dyn.h"
-#include "../models/geo.h"
 
 #include <math.h>
 #include <pthread.h>
@@ -72,10 +71,15 @@ void draw_outline(int line, int column, int height, int width, char* title, Outl
 #ifdef _WIN32
 DWORD defaultConsoleSettingsInput;
 DWORD defaultConsoleSettingsOutput;
-
 #endif
+
+const FILE* runtimeLog;
+
 void init_console()
 {
+    runtimeLog = fopen("runtime.log", "w");
+    fprintf(runtimeLog, "RUNTIME LOG START!\n");
+
     textBoxText = str_from("");
 #ifdef _WIN32
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
@@ -86,13 +90,17 @@ void init_console()
     GetConsoleMode(hOutput, &defaultConsoleSettingsOutput);
     SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 
+    SetConsoleOutputCP(65001);
+
     HWND windowHandle = GetConsoleWindow();
     ShowWindow(windowHandle, 3);
 #endif
     printf("\e[?25h");
 }
+
 void close_console()
 {
+    fclose((FILE*)runtimeLog);
     str_free(&textBoxText);
     vec_free(commands);
 #ifdef _WIN32
@@ -101,6 +109,16 @@ void close_console()
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleMode(hOutput, defaultConsoleSettingsOutput);
 #endif
+}
+
+BoundBox globalBounds = (BoundBox){
+    .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
+    .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
+};
+
+void set_bounding_box(BoundBox box)
+{
+    globalBounds = box;
 }
 
 void make_white_space(String* string, int amount)
@@ -121,45 +139,118 @@ void printf_color(char* text, char* color)
     printf("%s%s%s", color, text, ANSI_NORMAL);
 }
 
-BoundBox globalBounds = (BoundBox){
-    .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
-    .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
-};
+double get_point_dist_to_road(LCoord n1, LCoord n2, LCoord p, double tolerance)
+{
+    // Check if in bounding box
+    if (p.x > fmax(n1.x, n2.x) + tolerance || p.x < fmin(n1.x, n2.x) - tolerance ||
+        p.y > fmax(n1.y, n2.y) + tolerance || p.y < fmin(n1.y, n2.y) - tolerance)
+        return INFINITY;
 
-BOOL local_pos_is_on_road(LCoord coord)
+    // Formula from
+    // https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
+    double numerator = fabs((n2.y - n1.y) * p.x - (n2.x - n1.x) * p.y + n2.x * n1.y - n2.y * n1.x);
+
+    double denominator = sqrt(pow(n2.y - n1.y, 2) + pow(n2.x - n1.x, 2));
+
+    return numerator / denominator;
+}
+
+bool road_has_road_at(RoadSegSlice road_data, LCoord point, double tolerance)
+{
+    RoadSegSlice roads = road_data;
+
+    for (size_t i = 0; i < roads.len; i++)
+    {
+        NodeSlice nodes = roads.items[i].nodes;
+
+        for (size_t j = 0; j < nodes.len; j++)
+        {
+            if (j >= nodes.len - 1)
+                break;
+
+            Node node1 = nodes.items[j];
+            LCoord node1LCoord = global_to_local(node1.coords, globalBounds, vHeight, vWidth);
+            Node node2 = nodes.items[j + 1];
+            LCoord node2LCoord = global_to_local(node2.coords, globalBounds, vHeight, vWidth);
+
+
+            double dist = get_point_dist_to_road(node1LCoord, node2LCoord, point, tolerance);
+
+            if (dist >= -tolerance && dist <= tolerance)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+bool local_pos_is_on_road(LCoord coord)
 {
     for (int i = 0; i < current_roads.len; i++)
     {
         NodeSlice nodes = current_roads.items[i].nodes;
 
+        if (current_roads.items[i].name != NULL)
+            fprintf(runtimeLog, "NAME: %s\n", current_roads.items[i].name);
+        if (current_roads.items[i].material != NULL)
+            fprintf(runtimeLog, "MATE: %s\n", current_roads.items[i].material);
+
         for (int nodeI = 1; nodeI < nodes.len; nodeI++)
         {
             LCoord coord1 = global_to_local(nodes.items[nodeI - 1].coords, globalBounds, vHeight,
                                             vWidth);
-            LCoord coord2 = global_to_local(nodes.items[nodeI - 1].coords, globalBounds, vHeight,
+            LCoord coord2 = global_to_local(nodes.items[nodeI].coords, globalBounds, vHeight,
                                             vWidth);
 
-            Vec2 v1_1 = {coord.x - coord1.x, coord.y - coord1.y};
-            Vec2 v1_2 = {coord2.x - coord1.x, coord2.y - coord1.y};
-            double v1_1len = sqrtl(v1_1.x * v1_1.x + v1_1.y * v1_1.y);
-            double v1_2len = sqrtl(v1_2.x * v1_2.x + v1_2.y * v1_2.y);
+            Vec2 v1_1 = {
+                .x = (double)coord.x - (double)coord1.x,
+                .y = (double)coord.y - (double)coord1.y
+            };
+            Vec2 v1_2 = {
+                .x = (double)coord2.x - (double)coord1.x,
+                .y = (double)coord2.y - (double)coord1.y};
+            double v1_1len = sqrt(v1_1.x * v1_1.x + v1_1.y * v1_1.y);
+            double v1_2len = sqrt(v1_2.x * v1_2.x + v1_2.y * v1_2.y);
             double angle1 = acos((v1_1.x * v1_2.x + v1_1.y * v1_2.y) / (v1_1len * v1_2len));
 
-            Vec2 v2_1 = {coord.x - coord2.x, coord.y - coord2.y};
-            Vec2 v2_2 = {coord1.x - coord2.x, coord1.y - coord2.y};
+            const double stepPerLen = 0.5f;
+            const double totalSteps = v1_2len / stepPerLen;
+            double stepSize = v1_2len / totalSteps;
+            for (int step = 0; step <= totalSteps; step++)
+            {
+                double x = (v1_2.x / v1_2len) * stepSize * step + coord1.x;
+                double y = (v1_2.y / v1_2len) * stepSize * step + coord1.y;
+
+                double dst = sqrt(pow(x - coord.x, 2) + pow(y - coord.y, 2));
+                if (dst <= 0.5f)
+                    return true;
+            }
+            continue;
+            Vec2 v2_1 = {
+                (double)coord.x - (double)coord2.x,
+                (double)coord.y - (double)coord2.y
+            };
+            Vec2 v2_2 = {
+                (double)coord1.x - (double)coord2.x,
+                (double)coord1.y - (double)coord2.y
+            };
             double v2_1len = sqrtl(v2_1.x * v2_1.x + v2_1.y * v2_1.y);
             double v2_2len = sqrtl(v2_2.x * v2_2.x + v2_2.y * v2_2.y);
-            double angle2 = acos((v2_1.x * v2_2.x + v2_1.y * v2_2.y) / (v2_1len * v2_2len));
+            double cosVal = (v2_1.x * v2_2.y + v2_1.y * v2_2.x) / (v2_1len * v2_2len);
+            double angle2 = acos(cosVal);
 
-            if (angle1 <= 90 && angle2 <= 90)
+            if (angle1 <= M_PI / 2 && angle2 <= M_PI / 2)
             {
-                double dst = fabs(v1_2.x * coord.x + v1_2.y * coord.y) / v1_2len;
-                if (dst <= 0.5f) return TRUE;
+                double cross = v1_2.x * v1_1.y - v1_2.y * v1_1.x;
+                double dst = fabs(cross / sqrt(pow(v1_2.x, 2) * pow(v1_2.y, 2)));
+                if (dst <= 0.5f)
+                    return true;
             }
         }
     }
-    return FALSE;
+    return false;
 }
+
 
 void draw_grid()
 {
@@ -174,17 +265,19 @@ void draw_grid()
     {
         for (int x = 0; x < vWidth; x++)
         {
-            LCoord lCoord = {x, y};
-            BOOL isRoad = local_pos_is_on_road(lCoord);
-            if (isRoad && strcmp(ANSI_CODE, ANSI_BLUE) != 0)
-            {
-                str_append(&gridContent, ANSI_BLUE);
-                ANSI_CODE = ANSI_BLUE;
-            }
-            if (isRoad == false && strcmp(ANSI_CODE, ANSI_GREEN) != 0)
+            LCoord lCoord;
+            lCoord.x = x;
+            lCoord.y = y;
+            BOOL isRoad =  road_has_road_at(current_roads, lCoord, 0.5);;//local_pos_is_on_road(lCoord);
+            if (isRoad == false)
             {
                 str_append(&gridContent, ANSI_GREEN);
                 ANSI_CODE = ANSI_GREEN;
+            }
+            else
+            {
+                str_append(&gridContent, ANSI_BLUE);
+                ANSI_CODE = ANSI_BLUE;
             }
             char blocks[3] = {(char)219, (char)219, '\0'};
             str_append(&gridContent, blocks);
@@ -197,6 +290,7 @@ void draw_grid()
     str_free(&gridContent);
     // printf("\e[u");
     printf("\e[?25h");
+    fflush(runtimeLog);
 }
 
 void draw_text(char* text, int line, int column, int height, int width)
@@ -355,7 +449,7 @@ void write_to_textbox(char* text)
 void append_console_command(void (*action), char* description)
 {
     const ConsoleCommands cmd = {action, description};
-    vec_append(&commands, &cmd, 1);
+    vec_push(&commands, cmd);
 }
 
 void execute_command()

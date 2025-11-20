@@ -21,17 +21,15 @@ bool get_road_segments(BoundBox bbox, RoadSegSlice* road_buf)
         if (response_code == REQ_SUCCESS)
             break;
 
-        printf("Got code %ld; Retrying (%zu tries left)...\n", response_code, i - 1);
+        printf("  Got code %ld; Retrying (%zu tries left)...\n", response_code, i - 1);
 
         if (i == 1)
         {
-            printf("Got error response:\n%s\n", data_buf.chars);
+            printf("\n\033[32mGot error response:\033[31m\n  \"%s\"\n\033[0m", data_buf.chars);
             return false;
         }
     }
     printf("Request finished..\n");
-
-
     if (!parse(data_buf.chars, road_buf))
     {
         printf("Failed parse JSON response\n");

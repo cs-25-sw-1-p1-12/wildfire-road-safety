@@ -11,8 +11,8 @@ typedef struct
 
 typedef struct
 {
-    size_t x;
-    size_t y;
+    double x;
+    double y;
 } LCoord;
 
 typedef struct

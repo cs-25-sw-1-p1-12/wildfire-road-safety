@@ -3,6 +3,7 @@
 
 #include "../models/fire.h"
 #include "../models/road.h"
+#include "../models/geo.h"
 
 #define VIEWPORT_HEIGHT 50
 #define VIEWPORT_WIDTH 50
@@ -37,4 +38,9 @@ void close_console();
 ///This will execute on of the commands added with append_console_command depending on input,
 ///this runs on a separate thread so scan doesn't block the program.
 void execute_command();
+
+void set_bounding_box(BoundBox box);
+
+//Clears the console of all characters
+void clear();
 #endif

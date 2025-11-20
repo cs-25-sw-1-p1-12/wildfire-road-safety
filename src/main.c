@@ -1,11 +1,41 @@
+#include "Debug/Logger.h"
 #include "map/map.h"
 #include "models/road.h"
 #include "risk/risk.h"
 #include "visual/visual.h"
 
 #include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
 
+bool simIsRunning = false;
 bool programIsRunning = true;
+bool errorHappened = false;
+
+void* simulation_stop_check_thread()
+{
+    getchar();
+    simIsRunning = false;
+    return 0;
+}
+
+void run_simulation()
+{
+    clear();
+    pthread_t stopCheckThread;
+    pthread_create(&stopCheckThread, NULL, simulation_stop_check_thread, NULL);
+    simIsRunning = true;
+    while (simIsRunning)
+    {
+        //DO STUFF
+        printf("SIM IS RUNNING!\n");
+        sleep(1);
+    }
+    pthread_join(stopCheckThread, NULL);
+    printf("SIM STOPPED!");
+    sleep(1000);
+    draw_console();
+}
 
 void stop_program()
 {
@@ -14,15 +44,31 @@ void stop_program()
 
 int main()
 {
+    init_console();
+    
     // Bbox for area around Cassiopeia
     BoundBox bbox = (BoundBox){
         .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
-        .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
+        .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
     };
 
+    printf("\e[?25l");
+    printf("\033[32mGetting road data...\033[s\n\033[0m");
+    debug_log(MESSAGE, "Getting road data...");
     RoadSegSlice roads = {0};
     if (!get_road_segments(bbox, &roads))
-        return 1;
+    {
+        debug_log(ERROR, "Failed!");
+        printf("\n\033[0mPress any key to exit program...");
+        printf("\033[31m\033[u Failed!");
+
+        getchar();
+        close_console();
+        printf("\e[?25h");
+        return 0;
+    }
+    printf("\033[0m\33[u Success!");
+        debug_log(MESSAGE, "Success!");
 
     printf("FOUND %zu ROADS\n", roads.len);
 
@@ -51,10 +97,12 @@ int main()
 
     assess_roads(&roads, tempFires);
 
-
-    init_console();
+    set_bounding_box(bbox);
+    append_console_command(&run_simulation, "RUN SIMULATION");
+    append_console_command(&draw_console, "REFRESH CONSOLE");
     append_console_command(&stop_program, "EXIT");
-    draw_console();
+
+    draw_current_state(roads, tempFires);
     while (programIsRunning)
     {
         execute_command();

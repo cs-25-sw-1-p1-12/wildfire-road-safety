@@ -6,7 +6,6 @@
 LCoord global_to_local(GCoord gcoord, BoundBox bbox, size_t height, size_t width)
 {
     // Set boarders for local coordinates.
-
     double horistontal = (gcoord.lon - bbox.c1.lon) / (bbox.c2.lon - bbox.c1.lon);
     // Finds the x-axis for the local grid.
 
@@ -15,8 +14,10 @@ LCoord global_to_local(GCoord gcoord, BoundBox bbox, size_t height, size_t width
 
     // Place local coordinates within the boarders.
     LCoord local;
-    local.x = (size_t)(horistontal * ((double)width - 1));
-    local.y = (size_t)(vertical * ((double)height - 1));
+    double x = floor(horistontal * ((double)width - 1));
+    double y = floor(vertical * ((double)height - 1));
+    local.x = x;
+    local.y = y;
     return local;
 }
 void print_local(LCoord local)
