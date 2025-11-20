@@ -14,10 +14,10 @@
 
 typedef struct
 {
-    char topLeft;
-    char topRight;
-    char bottomLeft;
-    char bottomRight;
+    char* topLeft;
+    char* topRight;
+    char* bottomLeft;
+    char* bottomRight;
 } OutlineCorners;
 
 void draw_current_state(RoadSegSlice roads, FireSlice fires);

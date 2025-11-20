@@ -36,12 +36,26 @@
 
 //dyn.h lacks a function to only append char instead of a whole string/char*
 //So these are here for that purpose.
-const char tlCorner[2] = {(char)201, '\0'}; //╔
-const char verticalLine[2] = {(char)186, '\0'}; //║
-const char trCorner[2] = {(char)187, '\0'}; //╗
-const char upT[2] = {(char)202, '\0'};
-const char horizontalLine[2] = {(char)205, '\0'};
-const char* linebreak = "\n"; //line break
+///╔ default(win32: 201)
+#define TL_CORNER "╔"
+///╗ default(win32: 187)
+#define TR_CORNER "╗"
+///╚ default(win32: 200)
+#define BL_CORNER "╚"
+///╝ default(win32: 188)
+#define BR_CORNER "╝"
+
+///║ default(win32: 186)
+#define VERT_LINE "║"
+///═ default(win32: 205)
+#define HORI_LINE "═"
+
+///█ default(win32: 219)
+#define GRID_BLOCK "█"
+
+///╩ default(win32: 202)
+#define UP_T_JUNC "╩"
+#define LINEBREAK "\n"
 
 //These const exist due to some issue with Clion not interpreting them as actual numbers.
 const int vHeight = VIEWPORT_HEIGHT;
@@ -71,15 +85,11 @@ void draw_outline(int line, int column, int height, int width, char* title, Outl
 #ifdef _WIN32
 DWORD defaultConsoleSettingsInput;
 DWORD defaultConsoleSettingsOutput;
+UINT defaultConsoleOutputType;
 #endif
-
-const FILE* runtimeLog;
 
 void init_console()
 {
-    runtimeLog = fopen("runtime.log", "w");
-    fprintf(runtimeLog, "RUNTIME LOG START!\n");
-
     textBoxText = str_from("");
 #ifdef _WIN32
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
@@ -90,6 +100,7 @@ void init_console()
     GetConsoleMode(hOutput, &defaultConsoleSettingsOutput);
     SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 
+    defaultConsoleOutputType = GetConsoleOutputCP();
     SetConsoleOutputCP(65001);
 
     HWND windowHandle = GetConsoleWindow();
@@ -100,7 +111,6 @@ void init_console()
 
 void close_console()
 {
-    fclose((FILE*)runtimeLog);
     str_free(&textBoxText);
     vec_free(commands);
 #ifdef _WIN32
@@ -108,6 +118,8 @@ void close_console()
     SetConsoleMode(hInput, defaultConsoleSettingsInput);
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleMode(hOutput, defaultConsoleSettingsOutput);
+
+    SetConsoleOutputCP(defaultConsoleOutputType);
 #endif
 }
 
@@ -190,11 +202,6 @@ bool local_pos_is_on_road(LCoord coord)
     {
         NodeSlice nodes = current_roads.items[i].nodes;
 
-        if (current_roads.items[i].name != NULL)
-            fprintf(runtimeLog, "NAME: %s\n", current_roads.items[i].name);
-        if (current_roads.items[i].material != NULL)
-            fprintf(runtimeLog, "MATE: %s\n", current_roads.items[i].material);
-
         for (int nodeI = 1; nodeI < nodes.len; nodeI++)
         {
             LCoord coord1 = global_to_local(nodes.items[nodeI - 1].coords, globalBounds, vHeight,
@@ -268,7 +275,8 @@ void draw_grid()
             LCoord lCoord;
             lCoord.x = x;
             lCoord.y = y;
-            BOOL isRoad =  road_has_road_at(current_roads, lCoord, 0.5);;//local_pos_is_on_road(lCoord);
+            BOOL isRoad = road_has_road_at(current_roads, lCoord, 0.5);;
+            //local_pos_is_on_road(lCoord);
             if (isRoad == false)
             {
                 str_append(&gridContent, ANSI_GREEN);
@@ -279,8 +287,8 @@ void draw_grid()
                 str_append(&gridContent, ANSI_BLUE);
                 ANSI_CODE = ANSI_BLUE;
             }
-            char blocks[3] = {(char)219, (char)219, '\0'};
-            str_append(&gridContent, blocks);
+            str_append(&gridContent, GRID_BLOCK);
+            str_append(&gridContent, GRID_BLOCK);
         }
         str_append(&gridContent, "\033[1E");
         str_append(&gridContent, "\033[1C");
@@ -290,7 +298,6 @@ void draw_grid()
     str_free(&gridContent);
     // printf("\e[u");
     printf("\e[?25h");
-    fflush(runtimeLog);
 }
 
 void draw_text(char* text, int line, int column, int height, int width)
@@ -321,37 +328,31 @@ void draw_text(char* text, int line, int column, int height, int width)
 void draw_horizontal_outline(String* string, int line, int column, int width, char* title)
 {
     String headerText = str_from(title);
-    char gridMapSlice[width + 1];
-    int length = (width - 2) / 2 - ((headerText.len) / 2);
+    int lengthMax = (int)ceil(((double)width) / 2 - (((double)headerText.len) / 2));
+    int lengthMin = (int)floor(((double)width) / 2 - (((double)headerText.len) / 2));
 
     char text[1000];
     sprintf(text, "\033[%d;%dH", line, column);
     str_append(string, text);
-    for (int x = 0; x < width; ++x)
-    {
-        if (x >= length && x < length + headerText.len)
-            gridMapSlice[x] = headerText.chars[x - length];
-        else
-            gridMapSlice[x] = (char)205;
-    }
-    gridMapSlice[width] = '\0';
-    str_append(string, gridMapSlice);
+
+    for (int i = 0; i < lengthMax; i++)
+        str_append(string, HORI_LINE);
+
+    str_append(string, title);
+    for (int i = 0; i < lengthMin; i++)
+        str_append(string, HORI_LINE);
 }
 
 void draw_outline(int line, int column, int height, int width, char* title, OutlineCorners corners)
 {
-    const char tlCorner[2] = {corners.topLeft, '\0'};
-    const char trCorner[2] = {corners.topRight, '\0'};
-    const char blCorner[2] = {corners.bottomLeft, '\0'};
-    const char brCorner[2] = {corners.bottomRight, '\0'};
     char offsetPos[1000];
     sprintf(offsetPos, "\033[%d;%dH", line, column);
 
     String gridOutline = str_from(offsetPos);
 
-    str_append(&gridOutline, tlCorner);
+    str_append(&gridOutline, corners.topLeft);
     draw_horizontal_outline(&gridOutline, line, column + 1, width, title);
-    str_append(&gridOutline, trCorner);
+    str_append(&gridOutline, corners.topRight);
 
     char text[1000];
     sprintf(text, "\033[%dC", width);
@@ -362,9 +363,9 @@ void draw_outline(int line, int column, int height, int width, char* title, Outl
     for (int x = 0; x < height; x++)
     {
         str_append(&gridOutline, newline);
-        str_append(&gridOutline, verticalLine);
+        str_append(&gridOutline, VERT_LINE);
         str_append(&gridOutline, text);
-        str_append(&gridOutline, verticalLine);
+        str_append(&gridOutline, VERT_LINE);
 
         //DEBUG LINE NUMBER DISPLAY
         // char num[1000];
@@ -373,9 +374,9 @@ void draw_outline(int line, int column, int height, int width, char* title, Outl
     }
 
     str_append(&gridOutline, newline);
-    str_append(&gridOutline, blCorner);
+    str_append(&gridOutline, corners.bottomLeft);
     draw_horizontal_outline(&gridOutline, line + height + 1, column + 1, width, "");
-    str_append(&gridOutline, brCorner);
+    str_append(&gridOutline, corners.bottomRight);
     printf(gridOutline.chars);
     str_free(&gridOutline);
 }
@@ -404,12 +405,12 @@ void draw_console()
     clear();
     int textRead = 0;
 
-    const OutlineCorners gridCorners = {(char)201, (char)187, (char)202, (char)202};
+    const OutlineCorners gridCorners = {TL_CORNER, TR_CORNER, BL_CORNER, UP_T_JUNC};
     draw_outline(1, 1, vHeight, vWidth * 2, "MAP", gridCorners);
     draw_grid();
 
-    const OutlineCorners textboxCorners = {(char)201, (char)187, (char)200, (char)188};
-    draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight, tWidth,
+    const OutlineCorners textboxCorners = {TL_CORNER, TR_CORNER, BL_CORNER, BR_CORNER};
+    draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X, tHeight, tWidth,
                  "MESSAGE BOX",
                  textboxCorners);
     draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight,
