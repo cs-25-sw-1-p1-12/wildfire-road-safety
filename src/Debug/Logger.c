@@ -33,6 +33,7 @@ char* LOG_MSG_TYPE_TO_STRING(LOG_MESSAGE_TYPE msg_type)
 void init_debug()
 {
     logStream = fopen("debug.log", "a+");
+    debug_log(MESSAGE, "===========================================", 123);
     debug_log(MESSAGE, "Log is running!", 123);
 }
 

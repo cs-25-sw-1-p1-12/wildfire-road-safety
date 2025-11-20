@@ -45,7 +45,6 @@ void stop_program()
 int main()
 {
     init_console();
-    
     // Bbox for area around Cassiopeia
     BoundBox bbox = (BoundBox){
         .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
@@ -68,7 +67,7 @@ int main()
         return 0;
     }
     printf("\033[0m\33[u Success!");
-        debug_log(MESSAGE, "Success!");
+    debug_log(MESSAGE, "Success!");
 
     printf("FOUND %zu ROADS\n", roads.len);
 

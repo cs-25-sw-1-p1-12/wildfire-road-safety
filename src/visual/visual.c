@@ -1,5 +1,6 @@
 #include "visual.h"
 #include "../dyn.h"
+#include "../Debug/Logger.h"
 
 #include <math.h>
 #include <pthread.h>
@@ -83,6 +84,7 @@ VecDef(ConsoleCommands) commands;
 void clear();
 void draw_grid();
 void draw_outline(int line, int column, int height, int width, char* title, OutlineCorners corners);
+LCoord get_terminal_size();
 
 
 #ifdef _WIN32
@@ -93,6 +95,7 @@ UINT defaultConsoleOutputType;
 
 void init_console()
 {
+    debug_log(MESSAGE, "start initiating console...");
     textBoxText = str_from("");
 #ifdef _WIN32
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
@@ -107,15 +110,20 @@ void init_console()
     SetConsoleOutputCP(65001);
 
     HWND windowHandle = GetConsoleWindow();
-    ShowWindow(windowHandle, 3);
+    ShowWindow(windowHandle, SW_SHOWMAXIMIZED);
+
 #elif __linux__
 
 #endif
     printf("\e[?25h");
+    debug_log(MESSAGE, "Done!");
+    printf("\033[?1049h");
 }
 
 void close_console()
 {
+    printf("\033[?1049l");
+    debug_log(MESSAGE, "start closing console...");
     str_free(&textBoxText);
     vec_free(commands);
 #ifdef _WIN32
@@ -128,12 +136,31 @@ void close_console()
 #elif __linux__
 
 #endif
+    debug_log(MESSAGE, "Done!");
 }
 
 BoundBox globalBounds = (BoundBox){
     .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
     .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
 };
+
+LCoord get_terminal_size()
+{
+    //https://stackoverflow.com/questions/74431114/get-terminal-size-using-ansi-escape-sequences/74432616#74432616
+    printf("\033[s\033[9999;9999H");
+    printf("\033[6n");
+    const int c = getchar();
+    if (c == 27)
+    {
+        char response[100];
+        int line;
+        int column;
+        scanf("[%d;%d", &line, &column);
+        return (LCoord){.x = column, .y = line};
+    }
+    printf("\033[u");
+    return (LCoord){.x = 0, .y = 0};
+}
 
 void set_bounding_box(BoundBox box)
 {
@@ -410,37 +437,31 @@ void draw_cmd()
 
 void draw_console()
 {
-    printf("\e[?25l");
     printf(
         "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST SLOW)",
         ANSI_NORMAL);
     clear();
+    printf("\e[?25l");
     int textRead = 0;
 
     const OutlineCorners gridCorners = {TL_CORNER, TR_CORNER, BL_CORNER, UP_T_JUNC};
     draw_outline(1, 1, vHeight, vWidth * 2, "MAP", gridCorners);
-    draw_grid();
-
+    // printf("\e[?25l");
     const OutlineCorners textboxCorners = {TL_CORNER, TR_CORNER, BL_CORNER, BR_CORNER};
     draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X, tHeight, tWidth,
                  "MESSAGE BOX",
                  textboxCorners);
+    // printf("\e[?25l");
     draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight,
               tWidth);
+    // printf("\e[?25l");
 
     String horiLine = str_from("");
     draw_horizontal_outline(&horiLine, height + 2, vWidth * 2 + 3,
                             TEXTBOX_OFFSET_X * 2 + tWidth + 3, "");
     printf(horiLine.chars);
     str_free(&horiLine);
-    // for (int i = 0; i < tWidth + (vWidth + 1) * 2 + 2 + TEXTBOX_OFFSET_X * 2; i++)
-    // {
-    //     if (i == 0 || i == (vWidth) * 2 + 1)
-    //         printf("%c", 202);
-    //     else
-    //         printf("%c", 205);
-    // }
-    // printf("\n");
+    draw_grid();
     draw_cmd();
     printf("\e[?25h");
 }
@@ -468,9 +489,13 @@ void append_console_command(void (*action), char* description)
 void execute_command()
 {
     printf("\e[?25l");
+
+    printf("\e[?1000;1006;1015h");
     const int c = getchar();
+    printf("\e[?1000;1006;1015l");
     if (c == 27)
     {
+        // printf("\e[?1000;1006;1015l");
         getchar();
         const int nCode = getchar();
         printf("\33[2K\r");
@@ -483,11 +508,51 @@ void execute_command()
                 selectedCmd -= 1;
         }
         //Up
-        if (nCode == 66)
+        else if (nCode == 66)
         {
             selectedCmd += 1;
             if (selectedCmd >= commands.len)
                 selectedCmd = 0;
+        }
+        else if (nCode == '<')
+        {
+            //https://stackoverflow.com/questions/5966903/how-can-i-get-mousemove-and-mouseclick-in-bash/55437976#55437976
+            int mouseX = -1;
+            int mouseY = -1;
+
+            String readCmd = str_from("");
+            for (int i = 0; i < 100; i++)
+            {
+                char c = getchar();
+                str_push(&readCmd, c);
+                if (c == 'm' || c == 'M')
+                    break;
+            }
+            sscanf(readCmd.chars, "0;%d;%d", &mouseX, &mouseY);
+            int potIndex = mouseY - (height + 3);
+            if (potIndex >= 0 && potIndex < commands.len)
+            {
+                char indexStr[10];
+                sprintf(indexStr, "[%d]", potIndex);
+                if (strlen(commands.items[potIndex].descriptionText) + strlen(indexStr) + 1 >=
+                    mouseX)
+                    if (readCmd.chars[readCmd.len - 1] == 'M')
+                    {
+                        selectedCmd = potIndex;
+                        draw_cmd();
+                    }
+                    else if (readCmd.chars[readCmd.len - 1] == 'm')
+                    {
+                        selectedCmd = potIndex;
+                        commands.items[selectedCmd].triggerAction();
+                    }
+            }
+            else if (mouseX > 1 && mouseX < vWidth * 2 + 2 && mouseY > 1 && mouseY < vHeight + 2)
+            {
+                mouseY = MIN(mouseY, vHeight);
+                mouseX = MIN(mouseX+2, vWidth*2) / 2;
+                printf("that's inside the grid! (x: %d, y: %d)", mouseX, mouseY);
+            }
         }
 
         for (int i = 0; i < commands.len; i++)
@@ -496,6 +561,7 @@ void execute_command()
     }
     else if (c == 32)
     {
+        printf("\e[?1000;1006;1015l");
         commands.items[selectedCmd].triggerAction();
     }
     printf("\e[?25h");
