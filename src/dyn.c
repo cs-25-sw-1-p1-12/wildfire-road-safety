@@ -1,5 +1,7 @@
 #include "dyn.h"
 
+#include "Debug/Logger.h"
+
 #include <assert.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -204,7 +206,7 @@ char* str_clone_chars(String str)
 
     if (buffer == NULL)
     {
-        fprintf(stderr, "err: Failed to clone string chars\n");
+        debug_log(ERROR, "Failed to clone string chars\n");
         exit(EXIT_FAILURE);
     }
 
@@ -286,7 +288,7 @@ void str_ensure_cap(String* str, size_t new_cap)
 
         if (str->chars == NULL)
         {
-            fprintf(stderr, "err: Failed to reallocate string\n");
+            debug_log(ERROR, "Failed to reallocate string\n");
             exit(EXIT_FAILURE);
         }
 

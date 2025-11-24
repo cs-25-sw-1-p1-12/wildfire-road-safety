@@ -1,6 +1,8 @@
 #ifndef DYN_H
 #define DYN_H
 
+#include "Debug/Logger.h"
+
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -210,7 +212,7 @@
                                                                                     \
         if ((vec)->items == NULL)                                                   \
         {                                                                           \
-            fprintf(stderr, "err: Failed to reallocate vector\n");                  \
+            debug_log(ERROR, "Failed to reallocate vector\n");                      \
             exit(EXIT_FAILURE);                                                     \
         }                                                                           \
                                                                                     \

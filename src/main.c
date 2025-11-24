@@ -1,11 +1,34 @@
+#include "Debug/Logger.h"
 #include "map/map.h"
 #include "models/road.h"
 #include "risk/risk.h"
+#include "signal.h"
 
 #include <stdio.h>
 
+void signal_handler(int signalNum)
+{
+    switch (signalNum)
+    {
+        case SIGSEGV:
+            debug_log(ERROR, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
+            fprintf(stderr, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
+            break;
+        case SIGFPE:
+            debug_log(ERROR, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
+            fprintf(stderr, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
+            break;
+        default:
+            break;
+    }
+}
+
+
 int main()
 {
+    signal(SIGSEGV, signal_handler);
+    signal(SIGFPE, signal_handler);
+
     // Bbox for area around Cassiopeia
     BoundBox bbox = (BoundBox){
         .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
