@@ -1,16 +1,20 @@
 #include "visual.h"
+
+#include "../Debug/Logger.h"
 #include "../dyn.h"
 #include "../Debug/Logger.h"
 
 #include <math.h>
 #include <pthread.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <unistd.h>
 
 #ifdef _WIN32
 #include <windows.h>
-#elif __linux__
+#else // Linux & MacOS
 #include <termios.h>
+#include <unistd.h>
 #endif
 
 //https://stackoverflow.com/questions/6486289/how-to-clear-the-console-in-c
@@ -42,35 +46,35 @@
 219:█
  */
 
-//dyn.h lacks a function to only append char instead of a whole string/char*
-//So these are here for that purpose.
-///╔ default(win32: 201)
+// dyn.h lacks a function to only append char instead of a whole string/char*
+// So these are here for that purpose.
+/// ╔ default(win32: 201)
 #define TL_CORNER "╔"
-///╗ default(win32: 187)
+/// ╗ default(win32: 187)
 #define TR_CORNER "╗"
-///╚ default(win32: 200)
+/// ╚ default(win32: 200)
 #define BL_CORNER "╚"
-///╝ default(win32: 188)
+/// ╝ default(win32: 188)
 #define BR_CORNER "╝"
 
-///║ default(win32: 186)
+/// ║ default(win32: 186)
 #define VERT_LINE "║"
-///═ default(win32: 205)
+/// ═ default(win32: 205)
 #define HORI_LINE "═"
 
-///█ default(win32: 219)
+/// █ default(win32: 219)
 #define GRID_BLOCK "█"
 
-///╩ default(win32: 202)
+/// ╩ default(win32: 202)
 #define UP_T_JUNC "╩"
 #define LINEBREAK "\n"
 
-//These const exist due to some issue with Clion not interpreting them as actual numbers.
+// These const exist due to some issue with Clion not interpreting them as actual numbers.
 const int vHeight = VIEWPORT_HEIGHT;
 const int tHeight = TEXTBOX_HEIGHT;
 const int vWidth = VIEWPORT_WIDTH;
 const int tWidth = TEXTBOX_WIDTH;
-const int height = MAX(tHeight, vHeight);
+const int height = (tHeight > vHeight) ? tHeight : vHeight;
 
 unsigned int selectedCmd = 0;
 RoadSegSlice current_roads;
@@ -95,6 +99,8 @@ LCoord get_terminal_size();
 DWORD defaultConsoleSettingsInput;
 DWORD defaultConsoleSettingsOutput;
 UINT defaultConsoleOutputType;
+#else // Linux & MacOS
+struct termios orig_termios;
 #endif
 LCoord fontSize;
 
@@ -126,7 +132,13 @@ void init_console()
     //Maximize console window so everything gets drawn correctly.
     HWND windowHandle = GetConsoleWindow();
     ShowWindow(windowHandle, SW_SHOWMAXIMIZED);
-#elif __linux__
+#else // Linux & MacOS
+    tcgetattr(STDIN_FILENO, &orig_termios);
+
+    struct termios raw = orig_termios;
+    raw.c_lflag &= ~(ECHO | ICANON);
+
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 
 #endif
     //Shows mouse cursor (in the event it was hidden before initiation).
@@ -152,8 +164,8 @@ void close_console()
     SetConsoleMode(hOutput, defaultConsoleSettingsOutput);
 
     SetConsoleOutputCP(defaultConsoleOutputType);
-#elif __linux__
-
+#else // Linux & MacOS
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 #endif
     debug_log(MESSAGE, "Done!");
 }
