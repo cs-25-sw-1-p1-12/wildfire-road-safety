@@ -97,9 +97,9 @@ int main()
     assess_roads(&roads, tempFires);
 
     set_bounding_box(bbox);
-    prepend_console_command(&run_simulation, "RUN SIMULATION");
-    prepend_console_command(&draw_console, "REFRESH CONSOLE");
     prepend_console_command(&stop_program, "EXIT");
+    prepend_console_command(&draw_console, "REFRESH CONSOLE");
+    prepend_console_command(&run_simulation, "RUN SIMULATION");
 
     draw_current_state(roads, tempFires);
     while (programIsRunning)
