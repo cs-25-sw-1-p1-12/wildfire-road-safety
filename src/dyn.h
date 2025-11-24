@@ -127,12 +127,12 @@
 
 
 /// Add an element to the front of the vector
-#define vec_unshift(vec, item)                              \
-    {                                                       \
-        vec_ensure_cap((vec), (vec)->len + 1);              \
-        memcpy((vec)->items + 1, (vec)->items, (vec)->len); \
-        (vec)->items[0] = (item);                           \
-        (vec)->len++;                                       \
+#define vec_unshift(vec, item)                                                        \
+    {                                                                                 \
+        vec_ensure_cap((vec), (vec)->len + 1);                                        \
+        memcpy((vec)->items + 1, (vec)->items, (vec)->len * sizeof((vec)->items[0])); \
+        (vec)->items[0] = (item);                                                     \
+        (vec)->len++;                                                                 \
     }
 
 
@@ -166,13 +166,13 @@
 
 // Remove the first element in the vector, and puts it into out.
 /// This asserts that the vector has an element that can be shifted
-#define vec_shift(vec, out)                                                             \
-    {                                                                                   \
-        assert((vec)->len >= 1 &&                                                       \
-               "Vector failed to shift, expected length of >= 1, but got length of 0"); \
-        *(out) = (vec)->items[0];                                                       \
-        memcpy((vec)->items, (vec)->items + 1, (vec)->len - 1);                         \
-        (vec)->len -= 1;                                                                \
+#define vec_shift(vec, out)                                                                 \
+    {                                                                                       \
+        assert((vec)->len >= 1 &&                                                           \
+               "Vector failed to shift, expected length of >= 1, but got length of 0");     \
+        *(out) = (vec)->items[0];                                                           \
+        memcpy((vec)->items, (vec)->items + 1, ((vec)->len - 1) * sizeof((vec)->items[0])); \
+        (vec)->len -= 1;                                                                    \
     }
 
 /// Clone the items of a vector, returning them as an allocated pointer.
