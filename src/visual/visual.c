@@ -70,7 +70,7 @@ const int vHeight = VIEWPORT_HEIGHT;
 const int tHeight = TEXTBOX_HEIGHT;
 const int vWidth = VIEWPORT_WIDTH;
 const int tWidth = TEXTBOX_WIDTH;
-const int height = (tHeight > vHeight) ? tHeight : vHeight;
+const int height = MAX(tHeight, vHeight);
 
 unsigned int selectedCmd = 0;
 RoadSegSlice current_roads;
@@ -290,48 +290,6 @@ bool road_has_road_at(RoadSegSlice road_data, LCoord point, double tolerance)
     return false;
 }
 
-bool local_pos_is_on_road(LCoord coord)
-{
-    for (int i = 0; i < current_roads.len; i++)
-    {
-        NodeSlice nodes = current_roads.items[i].nodes;
-
-        for (int nodeI = 1; nodeI < nodes.len; nodeI++)
-        {
-            LCoord coord1 = global_to_local(nodes.items[nodeI - 1].coords, globalBounds, vHeight,
-                                            vWidth);
-            LCoord coord2 = global_to_local(nodes.items[nodeI].coords, globalBounds, vHeight,
-                                            vWidth);
-
-            Vec2 v1_1 = {
-                .x = (double)coord.x - (double)coord1.x,
-                .y = (double)coord.y - (double)coord1.y
-            };
-            Vec2 v1_2 = {
-                .x = (double)coord2.x - (double)coord1.x,
-                .y = (double)coord2.y - (double)coord1.y};
-            double v1_1len = sqrt(v1_1.x * v1_1.x + v1_1.y * v1_1.y);
-            double v1_2len = sqrt(v1_2.x * v1_2.x + v1_2.y * v1_2.y);
-            double angle1 = acos((v1_1.x * v1_2.x + v1_1.y * v1_2.y) / (v1_1len * v1_2len));
-
-            const double stepPerLen = 0.5f;
-            const double totalSteps = v1_2len / stepPerLen;
-            double stepSize = v1_2len / totalSteps;
-            for (int step = 0; step <= totalSteps; step++)
-            {
-                double x = (v1_2.x / v1_2len) * stepSize * step + coord1.x;
-                double y = (v1_2.y / v1_2len) * stepSize * step + coord1.y;
-
-                double dst = sqrt(pow(x - coord.x, 2) + pow(y - coord.y, 2));
-                if (dst <= 0.5f)
-                    return true;
-            }
-        }
-    }
-    return false;
-}
-
-
 void draw_grid()
 {
     fast_print("\e[?25l");
@@ -515,9 +473,10 @@ void write_to_textbox(char* text)
 void prepend_console_command(void (*action), char* description)
 {
     const ConsoleCommands cmd = {action, description};
-    vec_push(&commands, cmd);
+    vec_unshift(&commands, cmd);
 }
 
+//Start detecting user inputs (keyboard or mouse) from the user.
 void execute_command()
 {
     fast_print("\e[?25l");
