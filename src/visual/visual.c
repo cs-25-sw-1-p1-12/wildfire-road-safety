@@ -100,6 +100,7 @@ LCoord fontSize;
 
 void init_console()
 {
+    atexit(close_console);
     debug_log(MESSAGE, "start initiating console...");
     textBoxText = str_from("");
 #ifdef _WIN32
@@ -430,13 +431,29 @@ void draw_cmd()
     fast_print("\e[?25h");
 }
 
+void clean_up_console()
+{
+    fast_print("\033[H");
+    for (int y = 0; y < height; y++)
+    {
+        if (y >= TEXTBOX_OFFSET_Y - 1 && y <= TEXTBOX_OFFSET_Y + tHeight)
+        {
+            fast_print_args("\033[%dC\033[0K\033[1E", vWidth * 2 + TEXTBOX_OFFSET_X + tWidth + 1);
+        }
+        else
+        {
+            fast_print_args("\033[%dC\033[0K\033[1E", vWidth * 2 + 2);
+        }
+    }
+}
+
 void draw_console()
 {
     fast_print_args(" ");
     // fast_print_args(
     //     "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST SLOW)",
     //     ANSI_NORMAL);
-    clear();
+    fast_print("\033[H");
     fast_print("\e[?25l");
     const OutlineCorners gridCorners = {TL_CORNER, TR_CORNER, BL_CORNER, UP_T_JUNC};
     draw_outline(1, 1, vHeight, vWidth * 2, "MAP", gridCorners);
@@ -453,6 +470,7 @@ void draw_console()
     str_free(&horiLine);
     draw_grid();
     draw_cmd();
+    clean_up_console();
     fast_print("\e[?25h");
 }
 
@@ -476,9 +494,12 @@ void prepend_console_command(void (*action), char* description)
     vec_unshift(&commands, cmd);
 }
 
+bool isExecuting = false;
 //Start detecting user inputs (keyboard or mouse) from the user.
 void execute_command()
 {
+    if (isExecuting)
+        return;
     fast_print("\e[?25l");
 
     fast_print(ENABLE_MOUSE_INPUT_ANSI);
@@ -486,10 +507,8 @@ void execute_command()
     fast_print(DISABLE_MOUSE_INPUT_ANSI);
     if (c == 27)
     {
-        // printf("\e[?1000;1006;1015l");
         getchar();
         const int nCode = getchar();
-        fast_print("\33[2K\r");
 
         if (nCode == 65)
         {
@@ -527,7 +546,8 @@ void execute_command()
             {
                 char indexStr[10];
                 sprintf(indexStr, "[%d]", potIndex);
-                if (strlen(commands.items[potIndex].descriptionText) + strlen(indexStr) + 1 >= mouseX)
+                if (strlen(commands.items[potIndex].descriptionText) + strlen(indexStr) + 1 >=
+                    mouseX)
                 {
                     if (readCmd.chars[readCmd.len - 1] == 'M')
                     {
@@ -550,14 +570,18 @@ void execute_command()
             str_free(&readCmd);
         }
 
-        for (int i = 0; i < commands.len; i++)
-            fast_print("\033[A\33[2K\r");
         draw_cmd();
     }
     else if (c == 32)
     {
-        fast_print("\e[?1000;1006;1015l");
+        fast_print(DISABLE_MOUSE_INPUT_ANSI);
         commands.items[selectedCmd].triggerAction();
+    }
+    else if (c >= 48 && c <= 57)
+    {
+        int index = (c - 48);
+        if (index > 0 && index < commands.len)
+            commands.items[index].triggerAction();
     }
     fast_print("\e[?25h");
 }

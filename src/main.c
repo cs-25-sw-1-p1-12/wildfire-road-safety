@@ -107,5 +107,4 @@ int main()
         programIsRunning = true; //This is just to get the program to shut up about it "not being modified in the loop"
         execute_command();
     }
-    close_console();
 }
