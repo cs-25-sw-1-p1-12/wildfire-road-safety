@@ -3,6 +3,7 @@
 #include "models/road.h"
 #include "risk/risk.h"
 #include "visual/visual.h"
+#include "signal.h"
 
 #include <stdio.h>
 #include <pthread.h>
@@ -64,6 +65,7 @@ int main()
     init_console();
     signal(SIGSEGV, signal_handler);
     signal(SIGFPE, signal_handler);
+
     // Bbox for area around Cassiopeia
     BoundBox bbox = (BoundBox){
         .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
