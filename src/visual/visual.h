@@ -7,10 +7,19 @@
 
 #define VIEWPORT_HEIGHT 50
 #define VIEWPORT_WIDTH 50
-#define TEXTBOX_WIDTH 65;
-#define TEXTBOX_HEIGHT 30;
+#define TEXTBOX_WIDTH 65
+#define TEXTBOX_HEIGHT 30
 #define TEXTBOX_OFFSET_X 15
 #define TEXTBOX_OFFSET_Y 5
+
+//Escape codes
+#define ENABLE_MOUSE_INPUT_ANSI "\e[?1000;1006;1015h"
+#define DISABLE_MOUSE_INPUT_ANSI "\e[?1000;1006;1015l"
+
+#define ENABLE_ALTERNATIVE_BUFFER_ANSI "\033[?1049h"
+#define DISABLE_ALTERNATIVE_BUFFER_ANSI "\033[?1049l"
+
+
 
 typedef struct
 {
@@ -26,9 +35,9 @@ void draw_console();
 ///This changes the content of the textbox that is displayed besides the gridmap
 void write_to_textbox(char*);
 
-///Adds ads a function to a list of functions the user can execute with an index input into the console,
+///Adds a function to a list of functions, the user can execute with an index input, into the console,
 ///the description is what is displayed in the text
-void append_console_command(void* action, char* description);
+void prepend_console_command(void* action, char* description);
 
 ///configure the console to accept ANSI codes if it's windows based machine (does nothing if it's other types of OS)
 void init_console();

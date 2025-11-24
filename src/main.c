@@ -97,13 +97,14 @@ int main()
     assess_roads(&roads, tempFires);
 
     set_bounding_box(bbox);
-    append_console_command(&run_simulation, "RUN SIMULATION");
-    append_console_command(&draw_console, "REFRESH CONSOLE");
-    append_console_command(&stop_program, "EXIT");
+    prepend_console_command(&run_simulation, "RUN SIMULATION");
+    prepend_console_command(&draw_console, "REFRESH CONSOLE");
+    prepend_console_command(&stop_program, "EXIT");
 
     draw_current_state(roads, tempFires);
     while (programIsRunning)
     {
+        programIsRunning = true; //This is just to get the program to shut up about it "not being modified in the loop"
         execute_command();
     }
     close_console();

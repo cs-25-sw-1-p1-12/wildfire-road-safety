@@ -17,6 +17,9 @@
 //https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
 //https://stackoverflow.com/questions/917783/how-do-i-work-with-dynamic-multi-dimensional-arrays-in-c
 //https://www.cs.uleth.ca/~holzmann/C/system/ttyraw.c
+//https://superuser.com/questions/413073/windows-console-with-ansi-colors-handling
+//https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
+//https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Sixel-Graphics
 
 #define ANSI_RED "\033[31m"
 #define ANSI_GREEN "\033[32m"
@@ -82,13 +85,13 @@ typedef struct
 String textBoxText;
 VecDef(ConsoleCommands) commands;
 
-void clear();
 void draw_grid();
 void draw_outline(int line, int column, int height, int width, char* title, OutlineCorners corners);
 LCoord get_terminal_size();
 
 
 #ifdef _WIN32
+#define UTF8CODE 65001
 DWORD defaultConsoleSettingsInput;
 DWORD defaultConsoleSettingsOutput;
 UINT defaultConsoleOutputType;
@@ -97,35 +100,48 @@ LCoord fontSize;
 
 void init_console()
 {
-    // setbuf(stdout, NULL);
     debug_log(MESSAGE, "start initiating console...");
     textBoxText = str_from("");
 #ifdef _WIN32
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    //Saves the console input settings,
+    //so it can be correctly reset on shutdown
     GetConsoleMode(hInput, &defaultConsoleSettingsInput);
+    //Allows the windows console to receive and handle ANSI escape codes
     SetConsoleMode(hInput, ENABLE_VIRTUAL_TERMINAL_INPUT);
 
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    //Saves the console output settings,
+    //so it can be correctly reset on shutdown
     GetConsoleMode(hOutput, &defaultConsoleSettingsOutput);
+    //Allows the windows console to display and use ANSI escape codes
     SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 
+    //Saves the console encoding, so it can be correctly reset on shutdown
     defaultConsoleOutputType = GetConsoleOutputCP();
-    SetConsoleOutputCP(65001);
+    //Force the windows console to use UTF8 encoding
+    SetConsoleOutputCP(UTF8CODE);
 
+    //Maximize console window so everything gets drawn correctly.
     HWND windowHandle = GetConsoleWindow();
     ShowWindow(windowHandle, SW_SHOWMAXIMIZED);
 #elif __linux__
 
 #endif
+    //Shows mouse cursor (in the event it was hidden before initiation).
     printf("\e[?25h");
     debug_log(MESSAGE, "Done!");
-    printf("\033[?1049h");
+    //Enable the alternative buffer. Aka removes the ability to scroll in the console.
+    printf(ENABLE_ALTERNATIVE_BUFFER_ANSI);
 }
 
 void close_console()
 {
-    printf("\033[?1049l");
     debug_log(MESSAGE, "start closing console...");
+    //Disable the alternative buffer
+    printf(DISABLE_ALTERNATIVE_BUFFER_ANSI);
+    //Disable the detection of mouse inputs.
+    printf(DISABLE_MOUSE_INPUT_ANSI);
     str_free(&textBoxText);
     vec_free(commands);
 #ifdef _WIN32
@@ -141,12 +157,13 @@ void close_console()
     debug_log(MESSAGE, "Done!");
 }
 
-
+///Writes directly to the console, is much faster than printf, does not use a buffer.
 void fast_print(const char* format)
 {
     fwrite(format, strlen(format), 1, stdout);
 }
 
+///Writes directly to the console, this allows for arguments but is slightly slower than fast_print
 void fast_print_args(const char* format, ...)
 {
     va_list args;
@@ -172,10 +189,26 @@ LCoord get_terminal_size()
     const int c = getchar();
     if (c == 27)
     {
-        char response[100];
-        int line;
-        int column;
+        int line = -1;
+        int column = -1;
+
+        // char response[100];
+        // fgets(response, sizeof(response), stdin);
+        // const String responseBody = str_from(response);
+        // StringVec readParts = str_split_by(responseBody, ';');
+        // if (readParts.len < 2)
+        //     return (LCoord){.x = 0, .y = 0};
+        //
+        // char* rowEnd;
+        // char* colEnd;
+        // column = strtol(readParts.items[0].chars, &colEnd, 10);
+        // line = strtol(readParts.items[0].chars, &rowEnd, 10);
+
+
         scanf("[%d;%d", &line, &column);
+        if (line < 0 || line < 0)
+            return (LCoord){.x = 0, .y = 0};
+
         return (LCoord){.x = column, .y = line};
     }
     fast_print("\033[u");
@@ -479,7 +512,7 @@ void write_to_textbox(char* text)
               tWidth);
 }
 
-void append_console_command(void (*action), char* description)
+void prepend_console_command(void (*action), char* description)
 {
     const ConsoleCommands cmd = {action, description};
     vec_push(&commands, cmd);
@@ -489,9 +522,9 @@ void execute_command()
 {
     fast_print("\e[?25l");
 
-    fast_print("\e[?1000;1006;1015h");
+    fast_print(ENABLE_MOUSE_INPUT_ANSI);
     const int c = getchar();
-    fast_print("\e[?1000;1006;1015l");
+    fast_print(DISABLE_MOUSE_INPUT_ANSI);
     if (c == 27)
     {
         // printf("\e[?1000;1006;1015l");
@@ -522,9 +555,9 @@ void execute_command()
             String readCmd = str_from("");
             for (int i = 0; i < 100; i++)
             {
-                char c = getchar();
-                str_push(&readCmd, c);
-                if (c == 'm' || c == 'M')
+                char checkChar = (char)getchar();
+                str_push(&readCmd, checkChar);
+                if (checkChar == 'm' || checkChar == 'M')
                     break;
             };
             sscanf(readCmd.chars, "0;%d;%d", &mouseX, &mouseY);
@@ -535,8 +568,8 @@ void execute_command()
             {
                 char indexStr[10];
                 sprintf(indexStr, "[%d]", potIndex);
-                if (strlen(commands.items[potIndex].descriptionText) + strlen(indexStr) + 1 >=
-                    mouseX)
+                if (strlen(commands.items[potIndex].descriptionText) + strlen(indexStr) + 1 >= mouseX)
+                {
                     if (readCmd.chars[readCmd.len - 1] == 'M')
                     {
                         selectedCmd = potIndex;
@@ -547,6 +580,7 @@ void execute_command()
                         selectedCmd = potIndex;
                         commands.items[selectedCmd].triggerAction();
                     }
+                }
             }
             else if (mouseX > 1 && mouseX < vWidth * 2 + 2 && mouseY > 1 && mouseY < vHeight + 2)
             {
@@ -571,5 +605,7 @@ void execute_command()
 
 void clear()
 {
+    fflush(stdout);
     fast_print("\033c");
+    fflush(stdout);
 }
