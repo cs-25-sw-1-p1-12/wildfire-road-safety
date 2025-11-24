@@ -42,9 +42,28 @@ void stop_program()
     programIsRunning = false;
 }
 
+void signal_handler(int signalNum)
+{
+    switch (signalNum)
+    {
+        case SIGSEGV:
+            debug_log(ERROR, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
+            fprintf(stderr, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
+            break;
+        case SIGFPE:
+            debug_log(ERROR, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
+            fprintf(stderr, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
+            break;
+        default:
+            break;
+    }
+}
+
 int main()
 {
     init_console();
+    signal(SIGSEGV, signal_handler);
+    signal(SIGFPE, signal_handler);
     // Bbox for area around Cassiopeia
     BoundBox bbox = (BoundBox){
         .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
@@ -104,7 +123,8 @@ int main()
     draw_current_state(roads, tempFires);
     while (programIsRunning)
     {
-        programIsRunning = true; //This is just to get the program to shut up about it "not being modified in the loop"
+        //This is just to get the program to shut up about it "not being modified in the loop"
+        programIsRunning = true;
         execute_command();
     }
 }

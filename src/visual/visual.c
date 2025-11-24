@@ -139,7 +139,6 @@ void init_console()
     raw.c_lflag &= ~(ECHO | ICANON);
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
-
 #endif
     //Shows mouse cursor (in the event it was hidden before initiation).
     printf("\e[?25h");
@@ -184,7 +183,7 @@ void fast_print_args(const char* format, ...)
     char textBuffer[strlen(format) + 100];
     int amountWritten = vsprintf(textBuffer, format, args);
     char text[amountWritten + 1];
-    mempcpy(text, textBuffer, sizeof(text));
+    memcpy(text, textBuffer, sizeof(text));
     va_end(args);
     fast_print(text);
 }
