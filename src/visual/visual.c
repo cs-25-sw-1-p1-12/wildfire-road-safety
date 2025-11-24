@@ -1,22 +1,25 @@
 #include "visual.h"
-#include "../dyn.h"
+
 #include "../Debug/Logger.h"
+#include "../dyn.h"
 
 #include <math.h>
 #include <pthread.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <unistd.h>
 
 #ifdef _WIN32
 #include <windows.h>
-#elif __linux__
+#else // Linux & MacOS
 #include <termios.h>
+#include <unistd.h>
 #endif
 
-//https://stackoverflow.com/questions/6486289/how-to-clear-the-console-in-c
-//https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
-//https://stackoverflow.com/questions/917783/how-do-i-work-with-dynamic-multi-dimensional-arrays-in-c
-//https://www.cs.uleth.ca/~holzmann/C/system/ttyraw.c
+// https://stackoverflow.com/questions/6486289/how-to-clear-the-console-in-c
+// https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
+// https://stackoverflow.com/questions/917783/how-do-i-work-with-dynamic-multi-dimensional-arrays-in-c
+// https://www.cs.uleth.ca/~holzmann/C/system/ttyraw.c
 
 #define ANSI_RED "\033[31m"
 #define ANSI_GREEN "\033[32m"
@@ -39,30 +42,30 @@
 219:█
  */
 
-//dyn.h lacks a function to only append char instead of a whole string/char*
-//So these are here for that purpose.
-///╔ default(win32: 201)
+// dyn.h lacks a function to only append char instead of a whole string/char*
+// So these are here for that purpose.
+/// ╔ default(win32: 201)
 #define TL_CORNER "╔"
-///╗ default(win32: 187)
+/// ╗ default(win32: 187)
 #define TR_CORNER "╗"
-///╚ default(win32: 200)
+/// ╚ default(win32: 200)
 #define BL_CORNER "╚"
-///╝ default(win32: 188)
+/// ╝ default(win32: 188)
 #define BR_CORNER "╝"
 
-///║ default(win32: 186)
+/// ║ default(win32: 186)
 #define VERT_LINE "║"
-///═ default(win32: 205)
+/// ═ default(win32: 205)
 #define HORI_LINE "═"
 
-///█ default(win32: 219)
+/// █ default(win32: 219)
 #define GRID_BLOCK "█"
 
-///╩ default(win32: 202)
+/// ╩ default(win32: 202)
 #define UP_T_JUNC "╩"
 #define LINEBREAK "\n"
 
-//These const exist due to some issue with Clion not interpreting them as actual numbers.
+// These const exist due to some issue with Clion not interpreting them as actual numbers.
 const int vHeight = VIEWPORT_HEIGHT;
 const int tHeight = TEXTBOX_HEIGHT;
 const int vWidth = VIEWPORT_WIDTH;
@@ -92,6 +95,8 @@ LCoord get_terminal_size();
 DWORD defaultConsoleSettingsInput;
 DWORD defaultConsoleSettingsOutput;
 UINT defaultConsoleOutputType;
+#else // Linux & MacOS
+struct termios orig_termios;
 #endif
 LCoord fontSize;
 
@@ -114,7 +119,13 @@ void init_console()
 
     HWND windowHandle = GetConsoleWindow();
     ShowWindow(windowHandle, SW_SHOWMAXIMIZED);
-#elif __linux__
+#else // Linux & MacOS
+    tcgetattr(STDIN_FILENO, &orig_termios);
+
+    struct termios raw = orig_termios;
+    raw.c_lflag &= ~(ECHO | ICANON);
+
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 
 #endif
     printf("\e[?25h");
@@ -135,8 +146,8 @@ void close_console()
     SetConsoleMode(hOutput, defaultConsoleSettingsOutput);
 
     SetConsoleOutputCP(defaultConsoleOutputType);
-#elif __linux__
-
+#else // Linux & MacOS
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 #endif
     debug_log(MESSAGE, "Done!");
 }
@@ -161,12 +172,12 @@ void fast_print_args(const char* format, ...)
 
 BoundBox globalBounds = (BoundBox){
     .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
-    .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
+    .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
 };
 
 LCoord get_terminal_size()
 {
-    //https://stackoverflow.com/questions/74431114/get-terminal-size-using-ansi-escape-sequences/74432616#74432616
+    // https://stackoverflow.com/questions/74431114/get-terminal-size-using-ansi-escape-sequences/74432616#74432616
     fast_print("\033[s\033[9999;9999H");
     fast_print("\033[6n");
     const int c = getchar();
@@ -265,18 +276,15 @@ bool local_pos_is_on_road(LCoord coord)
 
         for (int nodeI = 1; nodeI < nodes.len; nodeI++)
         {
-            LCoord coord1 = global_to_local(nodes.items[nodeI - 1].coords, globalBounds, vHeight,
-                                            vWidth);
-            LCoord coord2 = global_to_local(nodes.items[nodeI].coords, globalBounds, vHeight,
-                                            vWidth);
+            LCoord coord1 =
+                global_to_local(nodes.items[nodeI - 1].coords, globalBounds, vHeight, vWidth);
+            LCoord coord2 =
+                global_to_local(nodes.items[nodeI].coords, globalBounds, vHeight, vWidth);
 
-            Vec2 v1_1 = {
-                .x = (double)coord.x - (double)coord1.x,
-                .y = (double)coord.y - (double)coord1.y
-            };
-            Vec2 v1_2 = {
-                .x = (double)coord2.x - (double)coord1.x,
-                .y = (double)coord2.y - (double)coord1.y};
+            Vec2 v1_1 = {.x = (double)coord.x - (double)coord1.x,
+                         .y = (double)coord.y - (double)coord1.y};
+            Vec2 v1_2 = {.x = (double)coord2.x - (double)coord1.x,
+                         .y = (double)coord2.y - (double)coord1.y};
             double v1_1len = sqrt(v1_1.x * v1_1.x + v1_1.y * v1_1.y);
             double v1_2len = sqrt(v1_2.x * v1_2.x + v1_2.y * v1_2.y);
             double angle1 = acos((v1_1.x * v1_2.x + v1_1.y * v1_2.y) / (v1_1len * v1_2len));
@@ -302,7 +310,7 @@ bool local_pos_is_on_road(LCoord coord)
 void draw_grid()
 {
     fast_print("\e[?25l");
-    //printf("\e[s");
+    // printf("\e[s");
     String gridContent = str_from("");
     fast_print("\033[2;2H");
 
@@ -410,10 +418,10 @@ void draw_outline(int line, int column, int height, int width, char* title, Outl
         str_append(&gridOutline, text);
         str_append(&gridOutline, VERT_LINE);
 
-        //DEBUG LINE NUMBER DISPLAY
-        // char num[1000];
-        // sprintf(num, " - %d", x + 1);
-        // str_append(&gridOutline, num);
+        // DEBUG LINE NUMBER DISPLAY
+        //  char num[1000];
+        //  sprintf(num, " - %d", x + 1);
+        //  str_append(&gridOutline, num);
     }
 
     str_append(&gridOutline, newline);
@@ -443,15 +451,14 @@ void draw_console()
 {
     fast_print_args(" ");
     // fast_print_args(
-    //     "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST SLOW)",
-    //     ANSI_NORMAL);
+    //     "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST
+    //     SLOW)", ANSI_NORMAL);
     clear();
     fast_print("\e[?25l");
     const OutlineCorners gridCorners = {TL_CORNER, TR_CORNER, BL_CORNER, UP_T_JUNC};
     draw_outline(1, 1, vHeight, vWidth * 2, "MAP", gridCorners);
     const OutlineCorners textboxCorners = {TL_CORNER, TR_CORNER, BL_CORNER, BR_CORNER};
-    draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X, tHeight, tWidth,
-                 "MESSAGE BOX",
+    draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X, tHeight, tWidth, "MESSAGE BOX",
                  textboxCorners);
     draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight,
               tWidth);
@@ -479,7 +486,7 @@ void write_to_textbox(char* text)
               tWidth);
 }
 
-void append_console_command(void (*action), char* description)
+void append_console_command(void(*action), char* description)
 {
     const ConsoleCommands cmd = {action, description};
     vec_push(&commands, cmd);
@@ -506,7 +513,7 @@ void execute_command()
             else
                 selectedCmd -= 1;
         }
-        //Up
+        // Up
         else if (nCode == 66)
         {
             selectedCmd += 1;
@@ -515,7 +522,7 @@ void execute_command()
         }
         else if (nCode == '<')
         {
-            //https://stackoverflow.com/questions/5966903/how-can-i-get-mousemove-and-mouseclick-in-bash/55437976#55437976
+            // https://stackoverflow.com/questions/5966903/how-can-i-get-mousemove-and-mouseclick-in-bash/55437976#55437976
             int mouseX = -1;
             int mouseY = -1;
 
@@ -551,8 +558,8 @@ void execute_command()
             else if (mouseX > 1 && mouseX < vWidth * 2 + 2 && mouseY > 1 && mouseY < vHeight + 2)
             {
                 mouseY = MIN(mouseY, vHeight);
-                mouseX = MIN(mouseX+2, vWidth*2) / 2;
-                //fast_print_args("that's inside the grid! (x: %d, y: %d)", mouseX, mouseY);
+                mouseX = MIN(mouseX + 2, vWidth * 2) / 2;
+                // fast_print_args("that's inside the grid! (x: %d, y: %d)", mouseX, mouseY);
             }
             str_free(&readCmd);
         }
