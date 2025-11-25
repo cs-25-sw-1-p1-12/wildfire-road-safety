@@ -24,6 +24,7 @@
 //https://superuser.com/questions/413073/windows-console-with-ansi-colors-handling
 //https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 //https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Sixel-Graphics
+//https://stackoverflow.com/questions/14888027/mutex-lock-threads
 
 #define ANSI_RED "\033[31m"
 #define ANSI_GREEN "\033[32m"
@@ -69,12 +70,80 @@
 #define UP_T_JUNC "╩"
 #define LINEBREAK "\n"
 
+LCoord get_terminal_size();
+
 // These const exist due to some issue with Clion not interpreting them as actual numbers.
 const int vHeight = VIEWPORT_HEIGHT;
 const int tHeight = TEXTBOX_HEIGHT;
 const int vWidth = VIEWPORT_WIDTH;
 const int tWidth = TEXTBOX_WIDTH;
 const int height = (tHeight > vHeight) ? tHeight : vHeight;
+LCoord consoleSize;
+
+int scaled_vHeight()
+{
+    if (consoleSize.x <= 0 || consoleSize.y <= 0)
+        for (int i = 0; i < 10; i++)
+        {
+            consoleSize = get_terminal_size();
+            if (consoleSize.x > 0 || consoleSize.y > 0)
+                break;
+            sleep(1);
+        }
+    return (int)((double)vHeight * (consoleSize.y / CONSOLE_TARGET_HEIGHT));
+}
+
+int scaled_vWidth()
+{
+    if (consoleSize.x <= 0 || consoleSize.y <= 0)
+        for (int i = 0; i < 10; i++)
+        {
+            consoleSize = get_terminal_size();
+            if (consoleSize.x > 0 || consoleSize.y > 0)
+                break;
+            sleep(1);
+        }
+    return (int)((double)vWidth * (consoleSize.x / CONSOLE_TARGET_WIDTH));
+}
+
+int scaled_tHeight()
+{
+    if (consoleSize.x <= 0 || consoleSize.y <= 0)
+        for (int i = 0; i < 10; i++)
+        {
+            consoleSize = get_terminal_size();
+            if (consoleSize.x > 0 || consoleSize.y > 0)
+                break;
+            sleep(1);
+        }
+    return (int)((double)tHeight * (consoleSize.y / CONSOLE_TARGET_HEIGHT));
+}
+
+int scaled_tWidth()
+{
+    if (consoleSize.x <= 0 || consoleSize.y <= 0)
+        for (int i = 0; i < 10; i++)
+        {
+            consoleSize = get_terminal_size();
+            if (consoleSize.x > 0 || consoleSize.y > 0)
+                break;
+            sleep(1);
+        }
+    return (int)((double)tWidth * (consoleSize.x / CONSOLE_TARGET_WIDTH));
+}
+
+int scaled_height()
+{
+    if (consoleSize.x <= 0 || consoleSize.y <= 0)
+        for (int i = 0; i < 10; i++)
+        {
+            consoleSize = get_terminal_size();
+            if (consoleSize.x > 0 || consoleSize.y > 0)
+                break;
+            sleep(1);
+        }
+    return (int)((double)height * (consoleSize.y / CONSOLE_TARGET_HEIGHT));
+}
 
 unsigned int selectedCmd = 0;
 RoadSegSlice current_roads;
@@ -84,6 +153,7 @@ typedef struct
 {
     void (*triggerAction)();
     char* descriptionText;
+    size_t index;
 } ConsoleCommands;
 
 String textBoxText;
@@ -91,7 +161,6 @@ VecDef(ConsoleCommands) commands;
 
 void draw_grid();
 void draw_outline(int line, int column, int height, int width, char* title, OutlineCorners corners);
-LCoord get_terminal_size();
 
 
 #ifdef _WIN32
@@ -104,6 +173,54 @@ struct termios orig_termios;
 #endif
 LCoord fontSize;
 
+bool cmdIsRunning = false;
+bool isMonitoring = true;
+
+void* monitor_resize_event()
+{
+    debug_log(MESSAGE, "RESIZE MONITOR WAS CREATED!");
+    while (isMonitoring)
+    {
+        //https://stackoverflow.com/questions/46658472/non-blocking-readconsoleinput
+        //https://stackoverflow.com/questions/10856926/sigwinch-equivalent-on-windows
+        //https://learn.microsoft.com/en-us/windows/console/reading-input-buffer-events
+        //https://stackoverflow.com/questions/6812224/getting-terminal-size-in-c-for-windows
+        //https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
+        double height = -1;
+        double width = -1;
+#if WIN32
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+        width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+        height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+#else
+        struct winsize w;
+        ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
+        width = w.ws_col;
+        height = w.ws_row;
+#endif
+        if (!cmdIsRunning)
+            if (fabs(width - consoleSize.x) > 1 || fabs(height - consoleSize.y) > 1)
+            {
+                debug_log(MESSAGE, "window size changed, resizing (%f, %f) -> (%f, %f)",
+                          consoleSize.x,
+                          consoleSize.y, width, height);
+                consoleSize = (LCoord){.x = width, .y = height};
+                draw_console();
+            }
+        int milliSecs = 16;
+        struct timespec ts = (struct timespec)
+        {
+            .tv_sec = milliSecs / 1000,
+            .tv_nsec = (milliSecs % 1000) * 1000000,
+        };
+        nanosleep(&ts, &ts);
+    }
+}
+
+pthread_t reSizeMonitor;
+
 void init_console()
 {
     atexit(close_console);
@@ -115,7 +232,8 @@ void init_console()
     //so it can be correctly reset on shutdown
     GetConsoleMode(hInput, &defaultConsoleSettingsInput);
     //Allows the windows console to receive and handle ANSI escape codes
-    SetConsoleMode(hInput, ENABLE_VIRTUAL_TERMINAL_INPUT);
+    SetConsoleMode(
+        hInput, ENABLE_VIRTUAL_TERMINAL_INPUT);
 
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     //Saves the console output settings,
@@ -145,10 +263,13 @@ void init_console()
     debug_log(MESSAGE, "Done!");
     //Enable the alternative buffer. Aka removes the ability to scroll in the console.
     printf(ENABLE_ALTERNATIVE_BUFFER_ANSI);
+    consoleSize = get_terminal_size();
 }
 
 void close_console()
 {
+    isMonitoring = false;
+    pthread_join(reSizeMonitor, NULL);
     debug_log(MESSAGE, "start closing console...");
     //Disable the alternative buffer
     printf(DISABLE_ALTERNATIVE_BUFFER_ANSI);
@@ -217,8 +338,11 @@ LCoord get_terminal_size()
         // line = strtol(readParts.items[0].chars, &rowEnd, 10);
 
 
-        scanf("[%d;%d", &line, &column);
-        if (line < 0 || line < 0)
+        scanf("[%d;%dR", &line, &column);
+
+        fast_print("\e[u");
+        debug_log(MESSAGE, "%f", (float)line);
+        if (line < 0 || column < 0)
             return (LCoord){.x = 0, .y = 0};
 
         return (LCoord){.x = column, .y = line};
@@ -238,6 +362,14 @@ void make_white_space(String* string, int amount)
     for (int x = 0; x < sizeof(whiteSpace); ++x)
         whiteSpace[x] = x < (sizeof(whiteSpace) - 1) ? ' ' : '\0';
     str_append(string, whiteSpace);
+}
+
+void make_white_space_fast_print(int length)
+{
+    char whiteSpace[length];
+    for (int x = 0; x < sizeof(whiteSpace); ++x)
+        whiteSpace[x] = x < (sizeof(whiteSpace) - 1) ? ' ' : '\0';
+    fast_print(whiteSpace);
 }
 
 void ANSI_RGB(String* string, int r, int g, int b)
@@ -304,6 +436,7 @@ bool road_has_road_at(RoadSegSlice road_data, LCoord point, double tolerance)
 
 void draw_grid()
 {
+    fast_print("\e[s");
     fast_print("\e[?25l");
     //printf("\e[s");
     String gridContent = str_from("");
@@ -312,11 +445,14 @@ void draw_grid()
     int greenCount = 0;
     int blueCount = 0;
     const char* ANSI_CODE = ANSI_NORMAL;
-    for (int y = 0; y < vHeight; y++)
+    const int h = scaled_vHeight();
+    const int w = scaled_vWidth();
+    const LCoord prctDiff = {.x = (double)w / vWidth, .y = (double)h / vHeight};
+    for (int y = 0; y < h; y++)
     {
-        for (int x = 0; x < vWidth; x++)
+        for (int x = 0; x < w; x++)
         {
-            const LCoord lCoord = (LCoord){.x = x, .y = y};
+            const LCoord lCoord = (LCoord){.x = (x / prctDiff.x), .y = (y / prctDiff.y)};
             const bool isRoad = road_has_road_at(current_roads, lCoord, 0.5);
             if (isRoad == false && strcmp(ANSI_CODE, ANSI_GREEN) != 0)
             {
@@ -338,11 +474,9 @@ void draw_grid()
     }
     str_append(&gridContent, ANSI_NORMAL);
     fast_print(gridContent.chars);
-    debug_log(MESSAGE, "green: %d, blue: %d, total grid size: %d", greenCount, blueCount,
-              vWidth * 2 * vHeight);
+    //(MESSAGE, "green: %d, blue: %d, total grid size: %d", greenCount, blueCount, vWidth * 2 * vHeight);
     str_free(&gridContent);
-    // printf("\e[u");
-    fast_print("\e[?25h");
+    printf("\e[u");;
 }
 
 void draw_text(char* text, int line, int column, int height, int width)
@@ -429,6 +563,7 @@ void draw_outline(int line, int column, int height, int width, char* title, Outl
 
 void draw_cmd()
 {
+    const int height = scaled_height();
     fast_print("\e[?25l");
     fast_print_args("\033[%d;0H", height + 3);
     for (int i = 0; i < commands.len; i++)
@@ -444,26 +579,61 @@ void draw_cmd()
 
 void clean_up_console()
 {
+    const int tHeight = scaled_tHeight();
+    const int tWidth = scaled_tWidth();
+    const int vWidth = scaled_vWidth();
+    const int height = scaled_height();
+    fast_print("\e[s");
+    fast_print("\e[?25l");
     fast_print("\033[H");
-    for (int y = 0; y < height; y++)
+    for (int y = 0; y <= height; y++)
     {
         if (y >= TEXTBOX_OFFSET_Y - 1 && y <= TEXTBOX_OFFSET_Y + tHeight)
         {
-            fast_print_args("\033[%dC\033[0K\033[1E", vWidth * 2 + TEXTBOX_OFFSET_X + tWidth + 1);
+            fast_print_args("\033[%dC", vWidth * 2 + 2);
+            make_white_space_fast_print(TEXTBOX_OFFSET_X - 2);
+            if (textBoxText.len <= 0 &&
+                y >= TEXTBOX_OFFSET_Y && y < TEXTBOX_OFFSET_Y + tHeight)
+            {
+                fast_print_args("\033[%dC", 1);
+                make_white_space_fast_print(tWidth + 1);
+                fast_print_args("\033[%dC\033[0K", 1);
+            }
+            else
+            {
+                fast_print_args("\033[%dC\033[0K", tWidth + 2);
+            }
         }
         else
         {
-            fast_print_args("\033[%dC\033[0K\033[1E", vWidth * 2 + 2);
+            fast_print_args("\033[%dC\033[0K", vWidth * 2 + 2);
         }
+        if (y < height)
+            fast_print("\033[1E");
     }
+    fast_print("\e[u");
 }
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void draw_console()
 {
+    pthread_mutex_lock(&mutex);
+    if (reSizeMonitor <= 0)
+        pthread_create(&reSizeMonitor, NULL, monitor_resize_event, NULL);
+    //consoleSize = get_terminal_size();
+
+    const int vHeight = scaled_vHeight();
+    const int tHeight = scaled_tHeight();
+    const int tWidth = scaled_tWidth();
+    const int vWidth = scaled_vWidth();
+    const int height = scaled_height();
+
     fast_print_args(" ");
     // fast_print_args(
     //     "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST SLOW)",
     //     ANSI_NORMAL);
+    fast_print("\e[s");
     fast_print("\033[H");
     fast_print("\e[?25l");
     const OutlineCorners gridCorners = {TL_CORNER, TR_CORNER, BL_CORNER, UP_T_JUNC};
@@ -475,14 +645,17 @@ void draw_console()
     draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight,
               tWidth);
     String horiLine = str_from("");
-    LCoord size = get_terminal_size();
-    draw_horizontal_outline(&horiLine, height + 2, vWidth * 2 + 3, size.x - (vWidth * 2 + 3), "");
+    draw_horizontal_outline(&horiLine, height + 2, vWidth * 2 + 3,
+                            (int)consoleSize.x - (vWidth * 2 + 3),
+                            "");
     fast_print(horiLine.chars);
     str_free(&horiLine);
     draw_grid();
     draw_cmd();
     clean_up_console();
-    fast_print("\e[?25h");
+    fast_print("\033[0J");
+    fast_print("\e[u");
+    pthread_mutex_unlock(&mutex);
 }
 
 void draw_current_state(RoadSegSlice roads, FireSlice fires)
@@ -494,6 +667,9 @@ void draw_current_state(RoadSegSlice roads, FireSlice fires)
 
 void write_to_textbox(char* text)
 {
+    const int tHeight = scaled_tHeight();
+    const int tWidth = scaled_tWidth();
+    const int vWidth = scaled_vWidth();
     textBoxText = str_from(text);
     draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight,
               tWidth);
@@ -501,16 +677,20 @@ void write_to_textbox(char* text)
 
 void prepend_console_command(void (*action), char* description)
 {
-    const ConsoleCommands cmd = {action, description};
+    const ConsoleCommands cmd = {action, description, commands.len};
     vec_unshift(&commands, cmd);
 }
 
-bool isExecuting = false;
 //Start detecting user inputs (keyboard or mouse) from the user.
 void execute_command()
 {
-    if (isExecuting)
-        return;
+    // const LCoord size = get_terminal_size();
+    // if (fabs(size.x - consoleSize.x) > 0.01 || fabs(size.x - consoleSize.x) > 0.01)
+    // {
+    //     draw_console();
+    //     consoleSize = size;
+    // }
+    fast_print("\e[s");
     fast_print("\e[?25l");
 
     fast_print(ENABLE_MOUSE_INPUT_ANSI);
@@ -518,7 +698,7 @@ void execute_command()
     fast_print(DISABLE_MOUSE_INPUT_ANSI);
     if (c == 27)
     {
-        getchar();
+        int bracket = getchar();
         const int nCode = getchar();
 
         if (nCode == 65)
@@ -568,7 +748,10 @@ void execute_command()
                     else if (readCmd.chars[readCmd.len - 1] == 'm')
                     {
                         selectedCmd = potIndex;
+                        debug_log(MESSAGE, "EXECUTING CMD WITH INDEX: %d", selectedCmd);
+                        cmdIsRunning = true;
                         commands.items[selectedCmd].triggerAction();
+                        cmdIsRunning = false;
                     }
                 }
             }
@@ -580,21 +763,30 @@ void execute_command()
             }
             str_free(&readCmd);
         }
-
         draw_cmd();
     }
     else if (c == 32)
     {
         fast_print(DISABLE_MOUSE_INPUT_ANSI);
+        debug_log(MESSAGE, "EXECUTING CMD WITH INDEX: %d", selectedCmd);
+        cmdIsRunning = true;
         commands.items[selectedCmd].triggerAction();
+        cmdIsRunning = false;
     }
-    else if (c >= 48 && c <= 57)
-    {
-        int index = (c - 48);
-        if (index > 0 && index < commands.len)
-            commands.items[index].triggerAction();
-    }
-    fast_print("\e[?25h");
+    //THIS ALLOW NUM INPUTS TO SELECT COMMANDS, CAN CURRENTLY CAUSE THE APP
+    //TO SELECT THE WRONG COMMAND IF THE INPUT BUFFER  CONTAINS TO MANY CHARS
+    // else if (c >= 48 && c <= 57)
+    // {
+    //     int index = (c - 48);
+    //     if (index > 0 && index < commands.len)
+    //     {
+    //         debug_log(MESSAGE, "EXECUTING CMD WITH INDEX: %d", index);
+    //         if (commands.items[index].index != index) debug_log(ERROR, "COMMAND INDEX MISMATCH!");
+    //         commands.items[index].triggerAction();
+    //     }
+    // }
+
+    fast_print("\e[l");
 }
 
 void clear()

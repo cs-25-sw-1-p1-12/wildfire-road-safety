@@ -26,12 +26,15 @@ void run_simulation()
     pthread_t stopCheckThread;
     pthread_create(&stopCheckThread, NULL, simulation_stop_check_thread, NULL);
     simIsRunning = true;
+    // ReSharper disable once CppDFAConstantConditions
     while (simIsRunning)
     {
         //DO STUFF
+        simIsRunning = true;
         printf("SIM IS RUNNING!\n");
         sleep(1);
     }
+    // ReSharper disable once CppDFAUnreachableCode
     pthread_join(stopCheckThread, NULL);
     printf("SIM STOPPED!");
     sleep(1);
@@ -56,15 +59,19 @@ void signal_handler(int signalNum)
             fprintf(stderr, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
             break;
         default:
+            debug_log(ERROR, "COULD NOT RECOGNISE SIGNAL");
+            fprintf(stderr, "COULD NOT RECOGNISE SIGNAL");
             break;
     }
+
+    exit(0);
 }
 
 int main()
 {
-    init_console();
     signal(SIGSEGV, signal_handler);
     signal(SIGFPE, signal_handler);
+    init_console();
 
     // Bbox for area around Cassiopeia
     BoundBox bbox = (BoundBox){
