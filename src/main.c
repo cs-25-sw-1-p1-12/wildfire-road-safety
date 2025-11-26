@@ -1,5 +1,7 @@
 #include "Debug/Logger.h"
+#include "dyn.h"
 #include "map/map.h"
+#include "models/fire.h"
 #include "models/road.h"
 #include "risk/risk.h"
 #include "signal.h"
@@ -46,9 +48,7 @@ int main()
     //
     // Temporary testing of assess_roads function
     //
-    FireSlice tempFires;
-    tempFires.items = malloc(sizeof(FireArea) * 2);
-    tempFires.len = 2;
+    FireSlice tempFires = slice_with_len(FireSlice, 2);
 
     tempFires.items[0] = (FireArea){
         .bbox = (BoundBox){.c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
@@ -65,4 +65,5 @@ int main()
     };
 
     assess_roads(&roads, tempFires);
+    slice_free(&tempFires);
 }
