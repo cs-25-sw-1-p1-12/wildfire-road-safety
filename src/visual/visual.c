@@ -25,6 +25,7 @@
 //https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 //https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Sixel-Graphics
 //https://stackoverflow.com/questions/14888027/mutex-lock-threads
+//https://www.geeksforgeeks.org/c/thread-functions-in-c-c/
 
 #define ANSI_RED "\033[31m"
 #define ANSI_GREEN "\033[32m"
@@ -186,6 +187,7 @@ void* monitor_resize_event()
         //https://learn.microsoft.com/en-us/windows/console/reading-input-buffer-events
         //https://stackoverflow.com/questions/6812224/getting-terminal-size-in-c-for-windows
         //https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
+        //https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
         double height = -1;
         double width = -1;
 #if WIN32
