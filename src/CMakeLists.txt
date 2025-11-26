@@ -15,7 +15,9 @@ ENDIF()
 set(SOURCE_FILES ./dyn.c ./map/map.c ./map/web.c ./map/json_lexer.c ./map/json_parse.c ./risk/risk.c ./simulation/simulation.c
         ./visual/visual.c
         models/geo.c
-        models/road.c)
+        models/road.c
+        Debug/Logger.c
+)
 
 add_executable(wfrs main.c ${SOURCE_FILES})
 

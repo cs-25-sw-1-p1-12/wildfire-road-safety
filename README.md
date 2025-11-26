@@ -6,7 +6,7 @@ This project aims to assist in the creation of risk assesments during evacuation
 ## Contributing
 
 ### 1. Sign out an objective
-Pick an objective card from the To Do List on the [JIRA board](https://p1gruppe12.atlassian.net/jira/core/projects/P1/board?filter=&groupBy=status). Transfer that card into the Taken Task column, then add yourself to the objective by clicking on the card, then on Members (under "Add to card"), and then selecting yourself.
+Pick an objective card from the To Do List on the [JIRA board](https://p1gruppe12.atlassian.net/jira/core/projects/P1/board?filter=&groupBy=status). Transfer that card into the In Progress Task column, then add yourself to the objective by clicking on the card, then on Members (under "Add to card"), and then selecting yourself.
 
 ### 2. Create a GIT branch
 #### In Git Bash
