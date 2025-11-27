@@ -8,6 +8,7 @@
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 
 #ifdef _WIN32
@@ -177,7 +178,7 @@ LCoord fontSize;
 bool cmdIsRunning = false;
 bool isMonitoring = true;
 
-void* monitor_resize_event()
+void monitor_resize_event()
 {
     debug_log(MESSAGE, "RESIZE MONITOR WAS CREATED!");
     while (isMonitoring)
@@ -206,14 +207,12 @@ void* monitor_resize_event()
             if (fabs(width - consoleSize.x) > 1 || fabs(height - consoleSize.y) > 1)
             {
                 debug_log(MESSAGE, "window size changed, resizing (%f, %f) -> (%f, %f)",
-                          consoleSize.x,
-                          consoleSize.y, width, height);
+                          consoleSize.x, consoleSize.y, width, height);
                 consoleSize = (LCoord){.x = width, .y = height};
                 draw_console();
             }
         int milliSecs = 16;
-        struct timespec ts = (struct timespec)
-        {
+        struct timespec ts = (struct timespec){
             .tv_sec = milliSecs / 1000,
             .tv_nsec = (milliSecs % 1000) * 1000000,
         };
@@ -622,8 +621,8 @@ void draw_console()
 {
     pthread_mutex_lock(&mutex);
     if (reSizeMonitor <= 0)
-        pthread_create(&reSizeMonitor, NULL, monitor_resize_event, NULL);
-    //consoleSize = get_terminal_size();
+        pthread_create(&reSizeMonitor, NULL, (void*)&monitor_resize_event, NULL);
+    // consoleSize = get_terminal_size();
 
     const int vHeight = scaled_vHeight();
     const int tHeight = scaled_tHeight();
@@ -677,7 +676,7 @@ void write_to_textbox(char* text)
               tWidth);
 }
 
-void prepend_console_command(void (*action), char* description)
+void prepend_console_command(void(*action), char* description)
 {
     const ConsoleCommands cmd = {action, description, commands.len};
     vec_unshift(&commands, cmd);
