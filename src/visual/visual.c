@@ -2,12 +2,12 @@
 
 #include "../Debug/Logger.h"
 #include "../dyn.h"
-#include "../Debug/Logger.h"
 
 #include <math.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 
 #ifdef _WIN32
@@ -17,14 +17,14 @@
 #include <unistd.h>
 #endif
 
-//https://stackoverflow.com/questions/6486289/how-to-clear-the-console-in-c
-//https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
-//https://stackoverflow.com/questions/917783/how-do-i-work-with-dynamic-multi-dimensional-arrays-in-c
-//https://www.cs.uleth.ca/~holzmann/C/system/ttyraw.c
-//https://superuser.com/questions/413073/windows-console-with-ansi-colors-handling
-//https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
-//https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Sixel-Graphics
-//https://stackoverflow.com/questions/14888027/mutex-lock-threads
+// https://stackoverflow.com/questions/6486289/how-to-clear-the-console-in-c
+// https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
+// https://stackoverflow.com/questions/917783/how-do-i-work-with-dynamic-multi-dimensional-arrays-in-c
+// https://www.cs.uleth.ca/~holzmann/C/system/ttyraw.c
+// https://superuser.com/questions/413073/windows-console-with-ansi-colors-handling
+// https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
+// https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Sixel-Graphics
+// https://stackoverflow.com/questions/14888027/mutex-lock-threads
 
 #define ANSI_RED "\033[31m"
 #define ANSI_GREEN "\033[32m"
@@ -176,16 +176,16 @@ LCoord fontSize;
 bool cmdIsRunning = false;
 bool isMonitoring = true;
 
-void* monitor_resize_event()
+void monitor_resize_event()
 {
     debug_log(MESSAGE, "RESIZE MONITOR WAS CREATED!");
     while (isMonitoring)
     {
-        //https://stackoverflow.com/questions/46658472/non-blocking-readconsoleinput
-        //https://stackoverflow.com/questions/10856926/sigwinch-equivalent-on-windows
-        //https://learn.microsoft.com/en-us/windows/console/reading-input-buffer-events
-        //https://stackoverflow.com/questions/6812224/getting-terminal-size-in-c-for-windows
-        //https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
+        // https://stackoverflow.com/questions/46658472/non-blocking-readconsoleinput
+        // https://stackoverflow.com/questions/10856926/sigwinch-equivalent-on-windows
+        // https://learn.microsoft.com/en-us/windows/console/reading-input-buffer-events
+        // https://stackoverflow.com/questions/6812224/getting-terminal-size-in-c-for-windows
+        // https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
         double height = -1;
         double width = -1;
 #if WIN32
@@ -204,14 +204,12 @@ void* monitor_resize_event()
             if (fabs(width - consoleSize.x) > 1 || fabs(height - consoleSize.y) > 1)
             {
                 debug_log(MESSAGE, "window size changed, resizing (%f, %f) -> (%f, %f)",
-                          consoleSize.x,
-                          consoleSize.y, width, height);
+                          consoleSize.x, consoleSize.y, width, height);
                 consoleSize = (LCoord){.x = width, .y = height};
                 draw_console();
             }
         int milliSecs = 16;
-        struct timespec ts = (struct timespec)
-        {
+        struct timespec ts = (struct timespec){
             .tv_sec = milliSecs / 1000,
             .tv_nsec = (milliSecs % 1000) * 1000000,
         };
@@ -228,26 +226,25 @@ void init_console()
     textBoxText = str_from("");
 #ifdef _WIN32
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    //Saves the console input settings,
-    //so it can be correctly reset on shutdown
+    // Saves the console input settings,
+    // so it can be correctly reset on shutdown
     GetConsoleMode(hInput, &defaultConsoleSettingsInput);
-    //Allows the windows console to receive and handle ANSI escape codes
-    SetConsoleMode(
-        hInput, ENABLE_VIRTUAL_TERMINAL_INPUT);
+    // Allows the windows console to receive and handle ANSI escape codes
+    SetConsoleMode(hInput, ENABLE_VIRTUAL_TERMINAL_INPUT);
 
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    //Saves the console output settings,
-    //so it can be correctly reset on shutdown
+    // Saves the console output settings,
+    // so it can be correctly reset on shutdown
     GetConsoleMode(hOutput, &defaultConsoleSettingsOutput);
-    //Allows the windows console to display and use ANSI escape codes
+    // Allows the windows console to display and use ANSI escape codes
     SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 
-    //Saves the console encoding, so it can be correctly reset on shutdown
+    // Saves the console encoding, so it can be correctly reset on shutdown
     defaultConsoleOutputType = GetConsoleOutputCP();
-    //Force the windows console to use UTF8 encoding
+    // Force the windows console to use UTF8 encoding
     SetConsoleOutputCP(UTF8CODE);
 
-    //Maximize console window so everything gets drawn correctly.
+    // Maximize console window so everything gets drawn correctly.
     HWND windowHandle = GetConsoleWindow();
     ShowWindow(windowHandle, SW_SHOWMAXIMIZED);
 #else // Linux & MacOS
@@ -258,10 +255,10 @@ void init_console()
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 #endif
-    //Shows mouse cursor (in the event it was hidden before initiation).
+    // Shows mouse cursor (in the event it was hidden before initiation).
     printf("\e[?25h");
     debug_log(MESSAGE, "Done!");
-    //Enable the alternative buffer. Aka removes the ability to scroll in the console.
+    // Enable the alternative buffer. Aka removes the ability to scroll in the console.
     printf(ENABLE_ALTERNATIVE_BUFFER_ANSI);
     consoleSize = get_terminal_size();
 }
@@ -271,9 +268,9 @@ void close_console()
     isMonitoring = false;
     pthread_join(reSizeMonitor, NULL);
     debug_log(MESSAGE, "start closing console...");
-    //Disable the alternative buffer
+    // Disable the alternative buffer
     printf(DISABLE_ALTERNATIVE_BUFFER_ANSI);
-    //Disable the detection of mouse inputs.
+    // Disable the detection of mouse inputs.
     printf(DISABLE_MOUSE_INPUT_ANSI);
     str_free(&textBoxText);
     vec_free(commands);
@@ -290,13 +287,13 @@ void close_console()
     debug_log(MESSAGE, "Done!");
 }
 
-///Writes directly to the console, is much faster than printf, does not use a buffer.
+/// Writes directly to the console, is much faster than printf, does not use a buffer.
 void fast_print(const char* format)
 {
     fwrite(format, strlen(format), 1, stdout);
 }
 
-///Writes directly to the console, this allows for arguments but is slightly slower than fast_print
+/// Writes directly to the console, this allows for arguments but is slightly slower than fast_print
 void fast_print_args(const char* format, ...)
 {
     va_list args;
@@ -311,12 +308,12 @@ void fast_print_args(const char* format, ...)
 
 BoundBox globalBounds = (BoundBox){
     .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
-    .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
+    .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
 };
 
 LCoord get_terminal_size()
 {
-    //https://stackoverflow.com/questions/74431114/get-terminal-size-using-ansi-escape-sequences/74432616#74432616
+    // https://stackoverflow.com/questions/74431114/get-terminal-size-using-ansi-escape-sequences/74432616#74432616
     fast_print("\033[s\033[9999;9999H");
     fast_print("\033[6n");
     const int c = getchar();
@@ -438,7 +435,7 @@ void draw_grid()
 {
     fast_print("\e[s");
     fast_print("\e[?25l");
-    //printf("\e[s");
+    // printf("\e[s");
     String gridContent = str_from("");
     fast_print("\033[2;2H");
 
@@ -474,9 +471,11 @@ void draw_grid()
     }
     str_append(&gridContent, ANSI_NORMAL);
     fast_print(gridContent.chars);
-    //(MESSAGE, "green: %d, blue: %d, total grid size: %d", greenCount, blueCount, vWidth * 2 * vHeight);
+    //(MESSAGE, "green: %d, blue: %d, total grid size: %d", greenCount, blueCount, vWidth * 2 *
+    // vHeight);
     str_free(&gridContent);
-    printf("\e[u");;
+    printf("\e[u");
+    ;
 }
 
 void draw_text(char* text, int line, int column, int height, int width)
@@ -547,10 +546,10 @@ void draw_outline(int line, int column, int height, int width, char* title, Outl
         str_append(&gridOutline, text);
         str_append(&gridOutline, VERT_LINE);
 
-        //DEBUG LINE NUMBER DISPLAY
-        // char num[1000];
-        // sprintf(num, " - %d", x + 1);
-        // str_append(&gridOutline, num);
+        // DEBUG LINE NUMBER DISPLAY
+        //  char num[1000];
+        //  sprintf(num, " - %d", x + 1);
+        //  str_append(&gridOutline, num);
     }
 
     str_append(&gridOutline, newline);
@@ -592,8 +591,7 @@ void clean_up_console()
         {
             fast_print_args("\033[%dC", vWidth * 2 + 2);
             make_white_space_fast_print(TEXTBOX_OFFSET_X - 2);
-            if (textBoxText.len <= 0 &&
-                y >= TEXTBOX_OFFSET_Y && y < TEXTBOX_OFFSET_Y + tHeight)
+            if (textBoxText.len <= 0 && y >= TEXTBOX_OFFSET_Y && y < TEXTBOX_OFFSET_Y + tHeight)
             {
                 fast_print_args("\033[%dC", 1);
                 make_white_space_fast_print(tWidth + 1);
@@ -620,8 +618,8 @@ void draw_console()
 {
     pthread_mutex_lock(&mutex);
     if (reSizeMonitor <= 0)
-        pthread_create(&reSizeMonitor, NULL, monitor_resize_event, NULL);
-    //consoleSize = get_terminal_size();
+        pthread_create(&reSizeMonitor, NULL, (void*)&monitor_resize_event, NULL);
+    // consoleSize = get_terminal_size();
 
     const int vHeight = scaled_vHeight();
     const int tHeight = scaled_tHeight();
@@ -631,23 +629,21 @@ void draw_console()
 
     fast_print_args(" ");
     // fast_print_args(
-    //     "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST SLOW)",
-    //     ANSI_NORMAL);
+    //     "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST
+    //     SLOW)", ANSI_NORMAL);
     fast_print("\e[s");
     fast_print("\033[H");
     fast_print("\e[?25l");
     const OutlineCorners gridCorners = {TL_CORNER, TR_CORNER, BL_CORNER, UP_T_JUNC};
     draw_outline(1, 1, vHeight, vWidth * 2, "MAP", gridCorners);
     const OutlineCorners textboxCorners = {TL_CORNER, TR_CORNER, BL_CORNER, BR_CORNER};
-    draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X, tHeight, tWidth,
-                 "MESSAGE BOX",
+    draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X, tHeight, tWidth, "MESSAGE BOX",
                  textboxCorners);
     draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight,
               tWidth);
     String horiLine = str_from("");
     draw_horizontal_outline(&horiLine, height + 2, vWidth * 2 + 3,
-                            (int)consoleSize.x - (vWidth * 2 + 3),
-                            "");
+                            (int)consoleSize.x - (vWidth * 2 + 3), "");
     fast_print(horiLine.chars);
     str_free(&horiLine);
     draw_grid();
@@ -675,13 +671,13 @@ void write_to_textbox(char* text)
               tWidth);
 }
 
-void prepend_console_command(void (*action), char* description)
+void prepend_console_command(void(*action), char* description)
 {
     const ConsoleCommands cmd = {action, description, commands.len};
     vec_unshift(&commands, cmd);
 }
 
-//Start detecting user inputs (keyboard or mouse) from the user.
+// Start detecting user inputs (keyboard or mouse) from the user.
 void execute_command()
 {
     // const LCoord size = get_terminal_size();
@@ -708,7 +704,7 @@ void execute_command()
             else
                 selectedCmd -= 1;
         }
-        //Up
+        // Up
         else if (nCode == 66)
         {
             selectedCmd += 1;
@@ -717,7 +713,7 @@ void execute_command()
         }
         else if (nCode == '<')
         {
-            //https://stackoverflow.com/questions/5966903/how-can-i-get-mousemove-and-mouseclick-in-bash/55437976#55437976
+            // https://stackoverflow.com/questions/5966903/how-can-i-get-mousemove-and-mouseclick-in-bash/55437976#55437976
             int mouseX = -1;
             int mouseY = -1;
 
@@ -758,8 +754,8 @@ void execute_command()
             else if (mouseX > 1 && mouseX < vWidth * 2 + 2 && mouseY > 1 && mouseY < vHeight + 2)
             {
                 mouseY = MIN(mouseY, vHeight);
-                mouseX = MIN(mouseX+2, vWidth*2) / 2;
-                //fast_print_args("that's inside the grid! (x: %d, y: %d)", mouseX, mouseY);
+                mouseX = MIN(mouseX + 2, vWidth * 2) / 2;
+                // fast_print_args("that's inside the grid! (x: %d, y: %d)", mouseX, mouseY);
             }
             str_free(&readCmd);
         }
@@ -773,18 +769,18 @@ void execute_command()
         commands.items[selectedCmd].triggerAction();
         cmdIsRunning = false;
     }
-    //THIS ALLOW NUM INPUTS TO SELECT COMMANDS, CAN CURRENTLY CAUSE THE APP
-    //TO SELECT THE WRONG COMMAND IF THE INPUT BUFFER  CONTAINS TO MANY CHARS
-    // else if (c >= 48 && c <= 57)
-    // {
-    //     int index = (c - 48);
-    //     if (index > 0 && index < commands.len)
-    //     {
-    //         debug_log(MESSAGE, "EXECUTING CMD WITH INDEX: %d", index);
-    //         if (commands.items[index].index != index) debug_log(ERROR, "COMMAND INDEX MISMATCH!");
-    //         commands.items[index].triggerAction();
-    //     }
-    // }
+    // THIS ALLOW NUM INPUTS TO SELECT COMMANDS, CAN CURRENTLY CAUSE THE APP
+    // TO SELECT THE WRONG COMMAND IF THE INPUT BUFFER  CONTAINS TO MANY CHARS
+    //  else if (c >= 48 && c <= 57)
+    //  {
+    //      int index = (c - 48);
+    //      if (index > 0 && index < commands.len)
+    //      {
+    //          debug_log(MESSAGE, "EXECUTING CMD WITH INDEX: %d", index);
+    //          if (commands.items[index].index != index) debug_log(ERROR, "COMMAND INDEX
+    //          MISMATCH!"); commands.items[index].triggerAction();
+    //      }
+    //  }
 
     fast_print("\e[l");
 }

@@ -1,7 +1,9 @@
 build
+cmake-build-debug
 .idea
 .vscode
 .DS_Store
 .dotenv
 .envrc
 shell.nix
+debug.log
