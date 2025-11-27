@@ -683,7 +683,7 @@ void prepend_console_command(void (*action), char* description)
     vec_unshift(&commands, cmd);
 }
 
-//Start detecting user inputs (keyboard or mouse) from the user.
+///Start detecting user inputs (keyboard or mouse) from the user.
 void execute_command()
 {
     // const LCoord size = get_terminal_size();
