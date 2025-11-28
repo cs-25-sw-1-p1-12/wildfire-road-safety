@@ -71,6 +71,10 @@
 
 /// █ default(win32: 219)
 #define GRID_BLOCK "█"
+#define GRID_BLOCK_LIGHT "░"
+#define GRID_BLOCK_MEDIUM "▒"
+#define GRID_BLOCK_DARK "▓"
+
 
 /// ╩ default(win32: 202)
 #define UP_T_JUNC "╩"
@@ -481,8 +485,17 @@ void draw_grid()
                 str_append(&gridContent, ANSI_GRAY);
                 ANSI_CODE = ANSI_GRAY;
             }
-            str_append(&gridContent, GRID_BLOCK);
-            str_append(&gridContent, GRID_BLOCK);
+
+            if (strcmp(ANSI_CODE, ANSI_GRAY) == 0)
+            {
+                str_append(&gridContent, GRID_BLOCK);
+                str_append(&gridContent, GRID_BLOCK);
+            }
+            else
+            {
+                str_append(&gridContent, GRID_BLOCK_MEDIUM);
+                str_append(&gridContent, GRID_BLOCK_MEDIUM);
+            }
         }
         str_append(&gridContent, "\033[1E");
         str_append(&gridContent, "\033[1C");
