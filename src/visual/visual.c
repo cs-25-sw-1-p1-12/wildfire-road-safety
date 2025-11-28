@@ -8,12 +8,13 @@
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
-
+#include <stdio.h>
+#include <image>
 #ifdef _WIN32
 #include <windows.h>
 #else // Linux & MacOS
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 #endif
@@ -29,9 +30,13 @@
 //https://www.geeksforgeeks.org/c/thread-functions-in-c-c/
 
 #define ANSI_RED "\033[31m"
-#define ANSI_GREEN "\033[32m"
+//#define ANSI_GREEN "\033[32m"
 #define ANSI_BLUE "\033[34m"
 #define ANSI_NORMAL "\033[0m"
+
+
+#define ANSI_GREEN "\033[38;5;28m"
+#define ANSI_GRAY "\033[38;5;238m"
 
 
 /*
@@ -294,6 +299,7 @@ void close_console()
 ///Writes directly to the console, is much faster than printf, does not use a buffer.
 void fast_print(const char* format)
 {
+    //fputs(format, stdout);
     fwrite(format, strlen(format), 1, stdout);
 }
 
@@ -326,19 +332,6 @@ LCoord get_terminal_size()
         int line = -1;
         int column = -1;
 
-        // char response[100];
-        // fgets(response, sizeof(response), stdin);
-        // const String responseBody = str_from(response);
-        // StringVec readParts = str_split_by(responseBody, ';');
-        // if (readParts.len < 2)
-        //     return (LCoord){.x = 0, .y = 0};
-        //
-        // char* rowEnd;
-        // char* colEnd;
-        // column = strtol(readParts.items[0].chars, &colEnd, 10);
-        // line = strtol(readParts.items[0].chars, &rowEnd, 10);
-
-
         scanf("[%d;%dR", &line, &column);
 
         fast_print("\e[u");
@@ -351,6 +344,28 @@ LCoord get_terminal_size()
     fast_print("\033[u");
     return (LCoord){.x = 0, .y = 0};
 }
+
+LCoord get_cursor_pos()
+{
+    //https://stackoverflow.com/questions/74431114/get-terminal-size-using-ansi-escape-sequences/74432616#74432616
+    fast_print("\033[6n");
+    const int c = getchar();
+    if (c == 27)
+    {
+        int line = -1;
+        int column = -1;
+
+        scanf("[%d;%dR", &line, &column);
+
+        debug_log(MESSAGE, "%f", (float)line);
+        if (line < 0 || column < 0)
+            return (LCoord){.x = 0, .y = 0};
+
+        return (LCoord){.x = column, .y = line};
+    }
+    return (LCoord){.x = 0, .y = 0};
+}
+
 
 void set_bounding_box(BoundBox box)
 {
@@ -461,11 +476,11 @@ void draw_grid()
                 str_append(&gridContent, ANSI_GREEN);
                 ANSI_CODE = ANSI_GREEN;
             }
-            if (isRoad == true && strcmp(ANSI_CODE, ANSI_BLUE) != 0)
+            if (isRoad == true && strcmp(ANSI_CODE, ANSI_GRAY) != 0)
             {
                 blueCount++;
-                str_append(&gridContent, ANSI_BLUE);
-                ANSI_CODE = ANSI_BLUE;
+                str_append(&gridContent, ANSI_GRAY);
+                ANSI_CODE = ANSI_GRAY;
             }
             str_append(&gridContent, GRID_BLOCK);
             str_append(&gridContent, GRID_BLOCK);
@@ -598,6 +613,7 @@ void clean_up_console()
             {
                 fast_print_args("\033[%dC", 1);
                 make_white_space_fast_print(tWidth + 1);
+
                 fast_print_args("\033[%dC\033[0K", 1);
             }
             else
@@ -612,6 +628,17 @@ void clean_up_console()
         if (y < height)
             fast_print("\033[1E");
     }
+
+    fast_print("\033[2E");
+    for (int i = 0; i < commands.len; i++)
+    {
+        String cmdText = str_from("[%d] ");
+        str_append(&cmdText, commands.items[i].descriptionText);
+        char fullCmdText[strlen(cmdText.chars) + 100];
+        sprintf(fullCmdText, cmdText.chars, i);
+        fast_print_args("\033[%dC\033[0K\n", strlen(fullCmdText));
+    }
+    fast_print("\033[0J");
     fast_print("\e[u");
 }
 
@@ -622,8 +649,8 @@ void draw_console()
     pthread_mutex_lock(&mutex);
     if (reSizeMonitor <= 0)
         pthread_create(&reSizeMonitor, NULL, (void*)&monitor_resize_event, NULL);
-    // consoleSize = get_terminal_size();
 
+    //Get draw space size adjusted to fit the screen size.
     const int vHeight = scaled_vHeight();
     const int tHeight = scaled_tHeight();
     const int tWidth = scaled_tWidth();
@@ -656,6 +683,8 @@ void draw_console()
     clean_up_console();
     fast_print("\033[0J");
     fast_print("\e[u");
+
+    fast_print("\033[?30l");
     pthread_mutex_unlock(&mutex);
 }
 
@@ -676,7 +705,7 @@ void write_to_textbox(char* text)
               tWidth);
 }
 
-void prepend_console_command(void(*action), char* description)
+void prepend_console_command(void (*action), char* description)
 {
     const ConsoleCommands cmd = {action, description, commands.len};
     vec_unshift(&commands, cmd);
@@ -744,7 +773,8 @@ void execute_command()
                     if (readCmd.chars[readCmd.len - 1] == 'M')
                     {
                         selectedCmd = potIndex;
-                        draw_cmd();
+                        draw_console();
+                        // draw_cmd();
                     }
                     else if (readCmd.chars[readCmd.len - 1] == 'm')
                     {
@@ -764,7 +794,8 @@ void execute_command()
             }
             str_free(&readCmd);
         }
-        draw_cmd();
+        draw_console();
+        // draw_cmd();
     }
     else if (c == 32)
     {
