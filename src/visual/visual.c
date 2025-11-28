@@ -10,7 +10,6 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <image>
 #ifdef _WIN32
 #include <windows.h>
 #else // Linux & MacOS
