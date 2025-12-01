@@ -63,7 +63,17 @@ int main()
         .spread_delta = 0.7,
         .temperature = 402
     };
-
     assess_roads(&roads, tempFires);
+
+
+    BoundBox bbox2 = (BoundBox) {
+        .c1 = {.lat = 38.788000, .lon = -79.182000},
+        .c2 = {.lat = 0, .lon = 0},
+    };
+    // UNCOMMENT ONLY WHEN TESTING API
+    // MAKE SURE TO COMMENT OUT THE LINE BELOW WHEN NOT IN USE
+    get_fire_areas(bbox2, &(FireSlice) {{},0});
+
     slice_free(&tempFires);
+    return 0;
 }
