@@ -6,10 +6,11 @@
 
 typedef struct
 {
-    BoundBox bbox;
+    GCoord gcoord;
     LCoord lcoord;
-    double spread_delta;
     double temperature;
+    double weatherIndex;
+    char* category;
 } FireArea;
 
 typedef SliceDef(FireArea) FireSlice;

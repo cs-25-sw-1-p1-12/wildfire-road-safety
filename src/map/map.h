@@ -9,7 +9,7 @@
 /// Get all the road segments from OpenStreetMaps API
 bool get_road_segments(BoundBox bbox, RoadSegSlice* slice);
 
-bool get_fire_areas(BoundBox bbox, FireSlice* fire_buf);
+bool get_fire_areas(GCoord coord, FireSlice* fire_buf);
 
 bool get_wind_velocity(GCoord coord, Vec2* wind_buf);
 
