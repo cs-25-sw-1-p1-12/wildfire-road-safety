@@ -4,6 +4,7 @@
 #include "../dyn.h"
 #include "geo.h"
 
+
 /// The type of vegetation in an area
 typedef enum
 {

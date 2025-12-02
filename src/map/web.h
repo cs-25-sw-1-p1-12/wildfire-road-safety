@@ -19,5 +19,6 @@ typedef enum
 /// bbox. The returned integer is the response code of the http response, which is 200 on success.
 /// If the request cannot be sent, -1 will be returned.
 int send_overpass_request(String* output, char* url, OverpassData data_type, BoundBox bbox);
+int send_ambee_fire_request(String* output, GCoord coord);
 
 #endif // WEB_H
