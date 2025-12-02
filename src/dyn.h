@@ -286,7 +286,7 @@ void* __clone_arr(void* ptr, size_t size);
 /// slice_free()
 #define slice_with_len(T, ln)                                \
     ((T){                                                    \
-        .items = malloc(ln + 1 * sizeof(((T*)0)->items[0])), \
+        .items = malloc((ln) * sizeof(((T*){0})->items[0])), \
         .len = (ln),                                         \
     })
 
