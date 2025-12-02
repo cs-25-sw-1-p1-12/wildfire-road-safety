@@ -43,7 +43,7 @@ bool get_road_segments(BoundBox bbox, RoadSegSlice* road_buf)
     return true;
 }
 
-bool get_fire_areas(BoundBox bbox, FireSlice* fire_buf)
+bool get_fire_areas(GCoord coord, FireSlice* fire_buf)
 {
     // API Endpoints
     //
@@ -60,7 +60,7 @@ bool get_fire_areas(BoundBox bbox, FireSlice* fire_buf)
     for (size_t i = 10; i > 0; i--)
     {
         str_empty(&data_buf);
-        response_code = send_ambee_fire_request(&data_buf, bbox.c1, bbox);
+        response_code = send_ambee_fire_request(&data_buf, coord);
 
         if (response_code == REQ_SUCCESS)
             break;

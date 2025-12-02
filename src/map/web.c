@@ -38,7 +38,7 @@ int send_overpass_request(String* output, char* url, OverpassData data_type, Bou
     return ret_code;
 }
 
-int send_ambee_fire_request(String* output, GCoord coord, BoundBox bbox)
+int send_ambee_fire_request(String* output, GCoord coord)
 {
     CURL* curl_handle;
     CURLcode res;
