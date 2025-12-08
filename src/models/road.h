@@ -11,9 +11,9 @@ typedef struct
 {
     size_t id;
     GCoord coords;
-} Node;
+} RoadNode;
 
-typedef SliceDef(Node) NodeSlice;
+typedef SliceDef(RoadNode) NodeSlice;
 
 typedef int RoadRisk;
 
