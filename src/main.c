@@ -56,19 +56,15 @@ void signal_handler(int signalNum)
             debug_log(ERROR, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
             fprintf(stderr, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
             exit(EXIT_FAILURE);
-            break;
         case SIGFPE:
             debug_log(ERROR, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
             fprintf(stderr, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
             exit(EXIT_FAILURE);
-            break;
         default:
             debug_log(ERROR, "COULD NOT RECOGNISE SIGNAL");
             fprintf(stderr, "COULD NOT RECOGNISE SIGNAL");
             break;
     }
-
-    exit(0);
 }
 
 
@@ -99,7 +95,7 @@ int main()
         printf("\e[?25h");
         return 0;
     }
-    printf("\033[0m\33[u Success!");
+    printf("\33[u\033[0J\033[32mSuccess!\033[0m\n");
     debug_log(MESSAGE, "Success!");
 
     printf("FOUND %zu ROADS\n", roads.len);
@@ -112,15 +108,17 @@ int main()
         .lon = -79.182000
     };
 
+
+    printf("\033[32mGetting fire data...\033[s\n\033[0m");
     // UNCOMMENT ONLY WHEN TESTING API
     // MAKE SURE TO COMMENT OUT THE LINE BELOW WHEN NOT IN USE
-    get_fire_areas(bbox2, &(FireSlice) {{},0}); // Rewrite JSON parser to create a FireSlice from this
+    //get_fire_areas(bbox2, &(FireSlice) {{},0}); // Rewrite JSON parser to create a FireSlice from this
 
+    printf("\33[u\033[0J\033[32mSuccess!\033[0m\n");
 
     //
     // Temporary testing of assess_roads function
     //
-    FireSlice tempFires = slice_with_len(FireSlice, 2);
 
     // Handcrafted FireArea struct
     FireArea fire_area = (FireArea) {
@@ -138,9 +136,10 @@ int main()
         .weatherIndex = 0.75,
         .category = "WF"
     };
-
-    tempFires.items[0] = fire_area;
-    tempFires.items[1] = fire_area_2;
+    FireArea tmpFire[2];
+    tmpFire[0] = fire_area;
+    tmpFire[1] = fire_area_2;
+    FireSlice tempFires = slice_from(tmpFire, 2);
 
     assess_roads(&roads, tempFires);
 

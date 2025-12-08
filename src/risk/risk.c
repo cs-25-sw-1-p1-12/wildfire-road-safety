@@ -22,9 +22,10 @@ void assess_roads(RoadSegSlice* roads, FireSlice fires)
         }
 
         RoadRisk risk = assess_road(&road, &nearbyFires);
-        printf("Road with id '%lu' rated with a risk value of %d\n", road.id, risk);
-
+        printf("Road with id '%llu' rated with a risk value of %d\n", road.id, road.risk);
+        debug_log(MESSAGE, "Road with id '%llu' rated with a risk value of %d", road.id, road.risk);
         vec_free(nearbyFires);
+        roads->items[i] = road;
     }
 }
 

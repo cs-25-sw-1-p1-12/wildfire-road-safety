@@ -36,6 +36,8 @@
 
 #define ANSI_GREEN "\033[38;5;28m"
 #define ANSI_GRAY "\033[38;5;238m"
+#define ANSI_ORANGE "\033[38;5;202m"
+#define ANSI_PINK "\033[38;5;201m"
 
 
 /*
@@ -453,6 +455,39 @@ bool road_has_road_at(RoadSegSlice road_data, LCoord point, double tolerance)
     return false;
 }
 
+int get_road_risk(RoadSegSlice road_data, LCoord point, double tolerance)
+{
+    RoadSegSlice roads = road_data;
+
+    for (size_t i = 0; i < roads.len; i++)
+    {
+        NodeSlice nodes = roads.items[i].nodes;
+
+        for (size_t j = 0; j < nodes.len; j++)
+        {
+            if (j >= nodes.len - 1)
+                break;
+
+            Node node1 = nodes.items[j];
+            LCoord node1LCoord = global_to_local(node1.coords, globalBounds, vHeight, vWidth);
+            Node node2 = nodes.items[j + 1];
+            LCoord node2LCoord = global_to_local(node2.coords, globalBounds, vHeight, vWidth);
+
+
+            double dist = get_point_dist_to_road(node1LCoord, node2LCoord, point, tolerance);
+
+            if (dist >= -tolerance && dist <= tolerance)
+            {
+                debug_log(MESSAGE, "risk is: %d with the id: %d", roads.items[i].risk,
+                          roads.items[i].id);
+                return roads.items[i].risk;
+            }
+        }
+    }
+
+    return -1;
+}
+
 void draw_grid()
 {
     fast_print("\e[s");
@@ -463,31 +498,46 @@ void draw_grid()
 
     int greenCount = 0;
     int blueCount = 0;
-    const char* ANSI_CODE = ANSI_NORMAL;
+    char* ANSI_CODE;
     const int h = scaled_vHeight();
     const int w = scaled_vWidth();
     const LCoord prctDiff = {.x = (double)w / vWidth, .y = (double)h / vHeight};
+    int ansi_code = -2;
     for (int y = 0; y < h; y++)
     {
         for (int x = 0; x < w; x++)
         {
             const LCoord lCoord = (LCoord){.x = (x / prctDiff.x), .y = (y / prctDiff.y)};
             const bool isRoad = road_has_road_at(current_roads, lCoord, 0.5);
-            if (isRoad == false && strcmp(ANSI_CODE, ANSI_GREEN) != 0)
+            if (isRoad == false && ansi_code != -1)
             {
+                ansi_code = -1;
                 greenCount++;
                 str_append(&gridContent, ANSI_GREEN);
-                ANSI_CODE = ANSI_GREEN;
             }
-            if (isRoad == true && strcmp(ANSI_CODE, ANSI_GRAY) != 0)
+            if (isRoad == true)
             {
+                const int risk = get_road_risk(current_roads, lCoord, 0.5);
                 blueCount++;
-                str_append(&gridContent, ANSI_GRAY);
-                ANSI_CODE = ANSI_GRAY;
-            }
+                int code;
+                int dummy1;
+                int dummy2;
 
-            if (strcmp(ANSI_CODE, ANSI_GRAY) == 0)
-            {
+                if (risk > 1)
+                    ANSI_CODE = ANSI_ORANGE;
+                else if (risk < 0)
+                    ANSI_CODE = ANSI_PINK;
+                else
+                    ANSI_CODE = ANSI_GRAY;
+
+
+                sscanf(ANSI_CODE, "[%d;%d;%d", &dummy1, &dummy2, &code);
+                if (code != ansi_code)
+                {
+                    ansi_code = code;
+                    str_append(&gridContent, ANSI_CODE);
+                }
+
                 str_append(&gridContent, GRID_BLOCK);
                 str_append(&gridContent, GRID_BLOCK);
             }
