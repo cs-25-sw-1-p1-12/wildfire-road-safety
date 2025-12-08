@@ -111,11 +111,11 @@
          : ((T){0}))
 
 /// Create a new vector with a set capacity
-#define vec_with_capacity(T, capacity)                             \
-    ((T){                                                          \
-        .items = malloc(capacity + 1 * sizeof(((T*)0)->items[0])), \
-        .len = 0,                                                  \
-        .cap = (capacity),                                         \
+#define vec_with_capacity(T, capacity)                               \
+    ((T){                                                            \
+        .items = malloc((capacity + 1) * sizeof(((T*)0)->items[0])), \
+        .len = 0,                                                    \
+        .cap = (capacity),                                           \
     })
 
 /// Create a new vector from a pointer or array. This will clone the contents of the pointer or
@@ -454,7 +454,7 @@ void str_push(String* str, char ch);
 void str_unshift(String* str, char ch);
 
 /// Append a cstr unto the end of a string
-void str_append(String* str, char* chs);
+void str_append(String* str, const char* chs);
 
 /// Append a formatted cstr unto the end of a string
 void str_appendf(String* str, const char* fmt, ...);
