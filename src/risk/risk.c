@@ -2,10 +2,12 @@
 #include "../models/road.h"
 #include <stdlib.h>
 
+static const double wildfireRiskMultiplier = 2;
+static const float nearbyFireThreshold = 200;
+
+
 void assess_roads(RoadSegSlice* roads, FireSlice fires)
 {
-    const int nearbyFireThreshold = 10;
-
     for (int i = 0; i < roads->len; i++)
     {
         RoadSeg road = roads->items[i];
@@ -14,7 +16,7 @@ void assess_roads(RoadSegSlice* roads, FireSlice fires)
         FireVec nearbyFires = {0};
         for (int fi = 0; fi < fires.len; fi++)
         {
-            if (fire_distance_from_road(road, fires.items[fi]) > nearbyFireThreshold) continue;
+            if (GetFireDstToRoad(road, fires.items[fi]) > nearbyFireThreshold) continue;
 
             vec_push(&nearbyFires, fires.items[fi]);
         }
@@ -24,12 +26,6 @@ void assess_roads(RoadSegSlice* roads, FireSlice fires)
 
         vec_free(nearbyFires);
     }
-}
-
-
-int fire_distance_from_road(RoadSeg road, FireArea fire)
-{
-    return (int) rand() % 20;
 }
 
 RoadRisk assess_road(RoadSeg* road, FireVec* fires)
@@ -43,8 +39,13 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires)
         FireArea fire = fires->items[i];
 
         // TEMPORARY RISK CALCULATION LOGIC
-        localRisk = (int) fire.temperature / 10.0 * fire.spread_delta;
-        localRisk *= fire_distance_from_road(*road, fire) / 10.0;
+        localRisk = fire.temperature / 100.0 * fire.weatherIndex;
+        localRisk *= GetFireDstToRoad(*road, fire) / 10.0;
+
+        if (strcmp(fire.category, "WF") == 0)
+        {
+            localRisk *= wildfireRiskMultiplier;
+        }
 
         risk += localRisk;
     }

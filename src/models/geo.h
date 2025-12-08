@@ -1,6 +1,8 @@
 #ifndef GEO_H
 #define GEO_H
 
+#include "../dyn.h"
+
 #include <stddef.h>
 
 typedef struct
@@ -14,6 +16,9 @@ typedef struct
     double x;
     double y;
 } LCoord;
+
+/// A polygon, consisting of a list of global coordintes as its vertices
+typedef VecDef(GCoord) GPoly;
 
 typedef struct
 {

@@ -41,6 +41,49 @@ int send_overpass_request(String* output, char* url, OverpassData data_type, Bou
     return ret_code;
 }
 
+int send_ambee_fire_request(String* output, GCoord coord)
+{
+    CURL* curl_handle;
+    CURLcode res;
+
+    curl_handle = curl_easy_init();
+
+    if (!curl_handle)
+        return -1;
+
+    char builtUrl[256];
+
+    snprintf(builtUrl, sizeof(builtUrl),
+        "https://api.ambeedata.com/fire/latest/by-lat-lng?lat=%.15g&lng=%.15g",
+        coord.lat, coord.lon
+    );
+
+    curl_easy_setopt(curl_handle, CURLOPT_URL, builtUrl);
+
+    // Headers
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "x-api-key: c88b672de92105da9b9fbcabc72bdb56e197939f08665d9c2a683912cf1619e3");
+    headers = curl_slist_append(headers, "Content-type: application/json");
+
+    curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
+
+
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, str_write);
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, output);
+
+    res = curl_easy_perform(curl_handle);
+    if(res != CURLE_OK) {
+        fprintf(stderr, "Request failed: %s\n", curl_easy_strerror(res));
+    }
+
+    long ret_code;
+    curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &ret_code);
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl_handle);
+
+    return ret_code;
+}
 
 size_t str_write(void* ptr, size_t size, size_t nmemb, String* str)
 {

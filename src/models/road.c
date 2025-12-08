@@ -10,7 +10,7 @@ void assign_roads(int number_of_roads, RoadSeg road, FireArea fire);
 float GetFireDstToRoad(RoadSeg road, FireArea fire)
 {
     double distance;
-    for (int i; i<road.nodes.len; i++)
+    for (int i = 0; i<road.nodes.len; i++)
     {
         double fireX=fire.lcoord.x;
         double fireY=fire.lcoord.y;

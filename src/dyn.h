@@ -29,6 +29,7 @@
 // FUNCTIONS/MACROS:
 //  - vec_owned_slice(vec)
 //  - vec_slice_range(arr, start, end)
+//  - vec_with_capacity(T, capacity)
 //  - vec_from(*arr, size)
 //  - vec_push(*vec, item)
 //  - vec_unshift(*vec, item)
@@ -111,6 +112,14 @@
     (((start) < (arr).len || (end) < (arr).len)                          \
          ? ((T){.items = (arr).items + (start), .len = (end) - (start)}) \
          : ((T){0}))
+
+/// Create a new vector with a set capacity
+#define vec_with_capacity(T, capacity)                             \
+    ((T){                                                          \
+        .items = malloc(capacity + 1 * sizeof(((T*)0)->items[0])), \
+        .len = 0,                                                  \
+        .cap = (capacity),                                         \
+    })
 
 /// Create a new vector from a pointer or array. This will clone the contents of the pointer or
 /// array.
@@ -240,6 +249,7 @@ void* __clone_arr(void* ptr, size_t size);
 //
 // FUNCTIONS AND MACROS:
 //  - slice_from(arr, size)
+//  - slice_with_len(T, size)
 //  - slice_free(slice)
 //      - todo: slice_clone(slice)
 //
@@ -274,6 +284,14 @@ void* __clone_arr(void* ptr, size_t size);
         .items = arr,         \
         .len = size,          \
     }
+
+/// Create a new slice with a set length. This will be allocated, and will need to be freed with
+/// slice_free()
+#define slice_with_len(T, ln)                                \
+    ((T){                                                    \
+        .items = malloc(ln + 1 * sizeof(((T*)0)->items[0])), \
+        .len = (ln),                                         \
+    })
 
 
 /// Free a slice. Be sure that the slice owns its contents before calling this, as it otherwise can
