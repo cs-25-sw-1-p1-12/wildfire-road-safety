@@ -28,7 +28,7 @@
 //https://stackoverflow.com/questions/14888027/mutex-lock-threads
 //https://www.geeksforgeeks.org/c/thread-functions-in-c-c/
 
-#define ANSI_RED "\033[31m"
+//#define ANSI_RED "\033[31m"
 //#define ANSI_GREEN "\033[32m"
 #define ANSI_BLUE "\033[34m"
 #define ANSI_NORMAL "\033[0m"
@@ -38,7 +38,7 @@
 #define ANSI_GRAY "\033[38;5;238m"
 #define ANSI_ORANGE "\033[38;5;202m"
 #define ANSI_PINK "\033[38;5;201m"
-
+#define ANSI_RED "\033[38;5;196m"
 
 /*
 185:╣
@@ -238,13 +238,13 @@ void init_console()
     debug_log(MESSAGE, "start initiating console...");
     textBoxText = str_from("");
 #ifdef _WIN32
+
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
     //Saves the console input settings,
     //so it can be correctly reset on shutdown
     GetConsoleMode(hInput, &defaultConsoleSettingsInput);
     //Allows the windows console to receive and handle ANSI escape codes
-    SetConsoleMode(
-        hInput, ENABLE_VIRTUAL_TERMINAL_INPUT);
+    SetConsoleMode(hInput, ENABLE_VIRTUAL_TERMINAL_INPUT);
 
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     //Saves the console output settings,
@@ -258,9 +258,11 @@ void init_console()
     //Force the windows console to use UTF8 encoding
     SetConsoleOutputCP(UTF8CODE);
 
+    /* THIS IS BORKED IN WINDOWS 11
     //Maximize console window so everything gets drawn correctly.
     HWND windowHandle = GetConsoleWindow();
-    ShowWindow(windowHandle, SW_SHOWMAXIMIZED);
+    ShowWindow(windowHandle, SW_MAXIMIZE);
+    */
 #else // Linux & MacOS
     tcgetattr(STDIN_FILENO, &orig_termios);
 
@@ -454,7 +456,17 @@ bool road_has_road_at(RoadSegSlice road_data, LCoord point, double tolerance)
 
     return false;
 }
-
+bool fire_has_fire_at(FireSlice fire_data, LCoord point, double tolerance)
+{
+    const FireSlice fires = fire_data;
+    for (int i = 0; i < fires.len; i++)
+    {
+        const LCoord n1 = fires.items[i].lcoord;
+        double dst = sqrt(pow(point.y - n1.y, 2) + pow(point.x - n1.x, 2));
+        if (dst < tolerance) return  true;
+    }
+    return false;
+}
 int get_road_risk(RoadSegSlice road_data, LCoord point, double tolerance)
 {
     RoadSegSlice roads = road_data;
@@ -509,13 +521,33 @@ void draw_grid()
         {
             const LCoord lCoord = (LCoord){.x = (x / prctDiff.x), .y = (y / prctDiff.y)};
             const bool isRoad = road_has_road_at(current_roads, lCoord, 0.5);
-            if (isRoad == false && ansi_code != -1)
+            const bool isFire = fire_has_fire_at(current_fires, lCoord, 0.5);
+            if (!isRoad && !isFire && ansi_code != -1)
             {
                 ansi_code = -1;
                 greenCount++;
                 str_append(&gridContent, ANSI_GREEN);
             }
-            if (isRoad == true)
+            if (isFire)
+            {
+                int code;
+                int dummy1;
+                int dummy2;
+
+                ANSI_CODE = ANSI_RED;
+
+
+                sscanf(ANSI_CODE, "[%d;%d;%d", &dummy1, &dummy2, &code);
+                if (code != ansi_code)
+                {
+                    ansi_code = code;
+                    str_append(&gridContent, ANSI_CODE);
+                }
+
+                str_append(&gridContent, GRID_BLOCK);
+                str_append(&gridContent, GRID_BLOCK);
+            }
+            else if (isRoad)
             {
                 const int risk = get_road_risk(current_roads, lCoord, 0.5);
                 blueCount++;
