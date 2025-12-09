@@ -3,6 +3,7 @@
 #include "map/map.h"
 #include "models/fire.h"
 #include "models/road.h"
+#include "models/vegetation.h"
 #include "risk/risk.h"
 #include "signal.h"
 
@@ -48,14 +49,13 @@ int main()
 
 
 
-    GCoord bbox2 = (GCoord) {
-        .lat = 38.788000,
-        .lon = -79.182000
-    };
+    GCoord bbox2 = (GCoord){.lat = 38.788000, .lon = -79.182000};
 
+    FireSlice fire_slice = {0};
     // UNCOMMENT ONLY WHEN TESTING API
     // MAKE SURE TO COMMENT OUT THE LINE BELOW WHEN NOT IN USE
-    get_fire_areas(bbox2, &(FireSlice) {{},0}); // Rewrite JSON parser to create a FireSlice from this
+    get_fire_areas(bbox2,
+                   &fire_slice); // Rewrite JSON parser to create a FireSlice from this
 
 
     //
@@ -64,17 +64,17 @@ int main()
     FireSlice tempFires = slice_with_len(FireSlice, 2);
 
     // Handcrafted FireArea struct
-    FireArea fire_area = (FireArea) {
-        .gcoord = (GCoord) {.lat = 1, .lon = 1},
-        .lcoord = (LCoord) {.x = 1, .y = 1},
+    FireArea fire_area = (FireArea){
+        .gcoord = (GCoord){.lat = 1, .lon = 1},
+        .lcoord = (LCoord){  .x = 1,   .y = 1},
         .temperature = 400,
         .weatherIndex = 0.41,
         .category = "WF"
     };
 
-    FireArea fire_area_2 = (FireArea) {
-        .gcoord = (GCoord) {.lat = 2, .lon = 2},
-        .lcoord = (LCoord) {.x = 2, .y = 2},
+    FireArea fire_area_2 = (FireArea){
+        .gcoord = (GCoord){.lat = 2, .lon = 2},
+        .lcoord = (LCoord){  .x = 2,   .y = 2},
         .temperature = 600,
         .weatherIndex = 0.75,
         .category = "WF"
@@ -85,8 +85,22 @@ int main()
 
     assess_roads(&roads, tempFires);
 
-
-
     slice_free(&tempFires);
+
+    VegSlice veg_slice = {0};
+
+    if (!get_vegetation(bbox, &veg_slice))
+        return 1;
+
+    printf("FOUND %zu AREAS!\n", veg_slice.len);
+
+    GCoord check_coord = {.lat = 57.012879168843696, .lon = 9.991665773980634};
+
+    VegType veg_type;
+    if (!coord_has_vegetation(check_coord, &veg_type, &veg_slice, 0.001))
+        return 1;
+
+    printf("FOUND VEGTYPE OF {tag: %d}\n", veg_type);
+
     return 0;
 }

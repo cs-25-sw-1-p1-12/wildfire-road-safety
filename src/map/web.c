@@ -51,9 +51,8 @@ int send_ambee_fire_request(String* output, GCoord coord)
     char builtUrl[256];
 
     snprintf(builtUrl, sizeof(builtUrl),
-        "https://api.ambeedata.com/fire/latest/by-lat-lng?lat=%.15g&lng=%.15g",
-        coord.lat, coord.lon
-    );
+             "https://api.ambeedata.com/fire/latest/by-lat-lng?lat=%.15g&lng=%.15g", coord.lat,
+             coord.lon);
 
     curl_easy_setopt(curl_handle, CURLOPT_URL, builtUrl);
 
@@ -69,7 +68,8 @@ int send_ambee_fire_request(String* output, GCoord coord)
     curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, output);
 
     res = curl_easy_perform(curl_handle);
-    if(res != CURLE_OK) {
+    if (res != CURLE_OK)
+    {
         fprintf(stderr, "Request failed: %s\n", curl_easy_strerror(res));
     }
 
@@ -81,6 +81,7 @@ int send_ambee_fire_request(String* output, GCoord coord)
 
     return ret_code;
 }
+
 
 size_t str_write(void* ptr, size_t size, size_t nmemb, String* str)
 {
@@ -101,8 +102,8 @@ size_t str_write(void* ptr, size_t size, size_t nmemb, String* str)
     "\"][\"service\"!~\"(parking_aisle|driveway)\"][\"access\"!~\"private\"](%lf,%lf,%lf,%lf);(._" \
     ";>;);out;"
 
-#define VEGETATION_QUERY_FORMAT                                                                    \
-    "[bbox:(%lf,%lf,%lf,%lf)][out:json];(nwr[natural];nwr[landuse];nwr[leisure];nwr[wetland];);(." \
+#define VEGETATION_QUERY_FORMAT                                                              \
+    "[bbox:%lf,%lf,%lf,%lf][out:json];(nw[natural];nw[landuse];nw[leisure];nw[wetland];);(." \
     "_;>;);out;"
 
 char* create_query(OverpassData data_type, BoundBox bbox)

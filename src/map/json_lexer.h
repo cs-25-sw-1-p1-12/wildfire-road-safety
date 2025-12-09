@@ -53,9 +53,19 @@ typedef struct
 
 void json_token_free(JsonToken tok);
 
-void expect_token(JsonToken got, JsonTokenType expect);
-void expect_token_and_free(JsonToken got, JsonTokenType expect);
+#define expect_token(got, expect)                                    \
+    {                                                                \
+        assert(got.tag == expect && "Encountered unexpected token"); \
+    }
+
+#define expect_token_and_free(got, expect)                           \
+    {                                                                \
+        assert(got.tag == expect && "Encountered unexpected token"); \
+        json_token_free(got);                                        \
+    }
+
 
 JsonToken json_lexer_next(JsonLexer* lex);
+JsonToken json_lexer_peek(JsonLexer lex);
 
 #endif // JSON_LEXER_H

@@ -111,7 +111,7 @@ void str_unshift(String* str, char ch)
     str->chars[str->len] = '\0';
 }
 
-void str_append(String* str, char* chs)
+void str_append(String* str, const char* chs)
 {
     size_t size = strlen(chs);
     str_ensure_cap(str, str->len + size);
