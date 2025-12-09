@@ -59,7 +59,7 @@ int send_ambee_fire_request(String* output, GCoord coord)
 
     // Headers
     struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, "x-api-key: c88b672de92105da9b9fbcabc72bdb56e197939f08665d9c2a683912cf1619e3");
+    headers = curl_slist_append(headers, "x-api-key: 135f6b1fc2b545586ec79db94580c59874ca7bf7081c87e98370dc3190c33ac7");
     headers = curl_slist_append(headers, "Content-type: application/json");
 
     curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
