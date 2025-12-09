@@ -8,3 +8,4 @@ cmake-build-debug
 shell.nix
 debug.log
 *_out.json
+.cache
