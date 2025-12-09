@@ -1,10 +1,13 @@
 #include "map.h"
 
+#include "../caching/cache.h"
 #include "../models/geo.h"
 #include "op_json_parse.h"
 #include "web.h"
 
 #include <stdio.h>
+
+#define REQUEST_TRIES 5
 
 bool get_road_segments(BoundBox bbox, RoadSegSlice* road_buf)
 {
@@ -12,7 +15,7 @@ bool get_road_segments(BoundBox bbox, RoadSegSlice* road_buf)
 
     // Continue requesting while the respose code isn't SUCCESS (200)
     long response_code;
-    for (size_t i = 10; i > 0; i--)
+    for (size_t i = REQUEST_TRIES; i > 0; i--)
     {
         str_empty(&data_buf);
         response_code = send_overpass_request(&data_buf, "https://overpass-api.de/api/interpreter",
@@ -26,14 +29,18 @@ bool get_road_segments(BoundBox bbox, RoadSegSlice* road_buf)
         if (i == 1)
         {
             printf("Got error response:\n%s\n", data_buf.chars);
-            return false;
+
+            str_empty(&data_buf);
+            if (!get_cache_data(CACHE_ROAD, &data_buf) || data_buf.len == 0)
+                return false;
+            else
+                printf("Using cached data (This may not reflect the current situation)\n");
         }
     }
     printf("Request finished..\n");
 
-    FILE* outf = fopen("road_out.json", "w");
-    fprintf(outf, "%s", data_buf.chars);
-    fclose(outf);
+    if (!set_cache_data(CACHE_ROAD, data_buf))
+        debug_log(WARNING, "Failed to write road cache data");
 
     if (!road_json_parse(data_buf.chars, road_buf))
     {
@@ -60,7 +67,7 @@ bool get_fire_areas(GCoord coord, FireSlice* fire_buf)
     String data_buf = {0};
 
     long response_code;
-    for (size_t i = 10; i > 0; i--)
+    for (size_t i = REQUEST_TRIES; i > 0; i--)
     {
         str_empty(&data_buf);
         response_code = send_ambee_fire_request(&data_buf, coord);
@@ -73,10 +80,17 @@ bool get_fire_areas(GCoord coord, FireSlice* fire_buf)
         if (i == 1)
         {
             printf("Got error response:\n%s\n", data_buf.chars);
-            return false;
+            str_empty(&data_buf);
+            if (!get_cache_data(CACHE_FIRE, &data_buf) || data_buf.len == 0)
+                return false;
+            else
+                printf("Using cached data (This may not reflect the current situation)\n");
         }
     }
     printf("Request finished..\n");
+
+    if (!set_cache_data(CACHE_FIRE, data_buf))
+        debug_log(WARNING, "Failed to write fire cache data");
 
     printf("Received following from API call:\n%s\n", data_buf.chars);
 
@@ -91,7 +105,7 @@ bool get_vegetation(BoundBox bbox, VegSlice* veg_slice)
     String data_buf = {0};
 
     long response_code;
-    for (size_t i = 10; i > 0; i--)
+    for (size_t i = REQUEST_TRIES; i > 0; i--)
     {
         str_empty(&data_buf);
         response_code = send_overpass_request(&data_buf, "https://overpass-api.de/api/interpreter",
@@ -105,14 +119,17 @@ bool get_vegetation(BoundBox bbox, VegSlice* veg_slice)
         if (i == 1)
         {
             printf("Got error response:\n%s\n", data_buf.chars);
-            return false;
+            str_empty(&data_buf);
+            if (!get_cache_data(CACHE_VEGETATION, &data_buf) || data_buf.len == 0)
+                return false;
+            else
+                printf("Using cached data (This may not reflect the current situation)\n");
         }
     }
     printf("Request finished..\n");
 
-    FILE* outf = fopen("veg_out.json", "w");
-    fprintf(outf, "%s", data_buf.chars);
-    fclose(outf);
+    if (!set_cache_data(CACHE_VEGETATION, data_buf))
+        debug_log(WARNING, "Failed to write vegetation cache data");
 
     vegetation_json_parse(data_buf.chars, veg_slice);
 
