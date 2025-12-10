@@ -121,7 +121,7 @@ LineDir check_line_intersection(GCoord n1, GCoord n2, GCoord p, double tolerance
     if (dist > tolerance || dist < -tolerance)
         return DIR_NONE;
 
-    if (MIN(n1.lat, n2.lat) == n1.lat)
+    if (MIN(n1.lat, n2.lat) == n2.lat)
         return DIR_DOWN;
     else
         return DIR_UP;

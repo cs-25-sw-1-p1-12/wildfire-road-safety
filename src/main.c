@@ -152,21 +152,11 @@ int main()
     if (!get_vegetation(bbox, &veg_slice))
         return 1;
 
-    printf("FOUND %zu AREAS!\n", veg_slice.len);
-
-    GCoord check_coord = {.lat = 57.012879168843696, .lon = 9.991665773980634};
-
-    VegType veg_type;
-    if (!coord_has_vegetation(check_coord, &veg_type, &veg_slice, 0.001))
-        return 1;
-
-    printf("FOUND VEGTYPE OF {tag: %d}\n", veg_type);
-
     set_bounding_box(bbox);
     prepend_console_command(&stop_program, "EXIT");
     prepend_console_command(&draw_console, "REFRESH CONSOLE");
     prepend_console_command(&run_simulation, "RUN SIMULATION");
-    draw_current_state(roads, tempFires, veg_type);
+    draw_current_state(roads, tempFires, veg_slice);
     while (programIsRunning)
     {
         //This is just to get the program to shut up about it "not being modified in the loop"

@@ -43,7 +43,7 @@ typedef struct
     char* bottomRight;
 } OutlineCorners;
 
-void draw_current_state(RoadSegSlice roads, FireSlice fires, VegType vegType);
+void draw_current_state(RoadSegSlice roads, FireSlice fires, VegSlice vegetation);
 ///Refreshes the console, and redraws everything
 void draw_console();
 ///This changes the content of the textbox that is displayed besides the gridmap
@@ -64,6 +64,6 @@ void execute_command();
 
 void set_bounding_box(BoundBox box);
 
-//Clears the console of all characters
+///Clears the console of all characters
 void clear();
 #endif

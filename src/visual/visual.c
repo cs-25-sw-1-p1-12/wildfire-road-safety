@@ -153,7 +153,7 @@ int scaled_height()
 unsigned int selectedCmd = 0;
 RoadSegSlice current_roads;
 FireSlice current_fires;
-VegType current_vegType;
+VegSlice current_vegetation;
 
 typedef struct
 {
@@ -521,6 +521,7 @@ void draw_grid()
             const bool isRoad = road_has_road_at(current_roads, lCoord, tolerance);
             const bool isFire = fire_has_fire_at(current_fires, lCoord, tolerance);
 
+
             if (isFire)
             {
                 int code;
@@ -528,7 +529,6 @@ void draw_grid()
                 int dummy2;
 
                 ANSI_CODE = ANSI_RED;
-
 
                 sscanf(ANSI_CODE, "[%d;%d;%d", &dummy1, &dummy2, &code);
                 if (code != ansi_code)
@@ -542,11 +542,12 @@ void draw_grid()
             }
             else if (isRoad)
             {
-                const int risk = get_road_risk(current_roads, lCoord, tolerance);
-                blueCount++;
                 int code;
                 int dummy1;
                 int dummy2;
+
+                const int risk = get_road_risk(current_roads, lCoord, tolerance);
+                blueCount++;
 
                 if (risk > 1)
                     ANSI_CODE = ANSI_ORANGE;
@@ -568,12 +569,15 @@ void draw_grid()
             }
             else
             {
-                if (ansi_code != -1)
+                int code;
+                int dummy1;
+                int dummy2;
+                char* vegColor = ANSI_GREEN;
+                VegType veg_type;
+                GCoord gCoord = local_to_global(lCoord, globalBounds, vHeight, vWidth);
+                if (!coord_has_vegetation(gCoord, &veg_type, &current_vegetation, 0.001))
                 {
-                    ansi_code = -1;
-                    greenCount++;
-                    char* vegColor;
-                    switch (current_vegType)
+                    switch (veg_type)
                     {
                         case VEG_ROCK:
                             vegColor = ANSI_GRAY_LIGHT;
@@ -591,7 +595,14 @@ void draw_grid()
                             vegColor = ANSI_GREEN;
                         default:
                             vegColor = ANSI_PINK;
+                            debug_log(WARNING, "VEG_TYPE COLOR MISSING, VEG_TYPE: %d", (int)veg_type);
                     }
+                }
+                sscanf(vegColor, "[%d;%d;%d", &dummy1, &dummy2, &code);
+                if (ansi_code != code)
+                {
+                    ansi_code = code;
+                    greenCount++;
                     str_append(&gridContent, vegColor);
                 }
                 str_append(&gridContent, GRID_BLOCK_LIGHT);
@@ -784,7 +795,7 @@ void draw_console()
     draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X, tHeight, tWidth,
                  "MESSAGE BOX",
                  textboxCorners);
-    draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight,
+    draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 1, tHeight,
               tWidth);
     String horiLine = str_from("");
     draw_horizontal_outline(&horiLine, height + 2, vWidth * 2 + 3,
@@ -802,13 +813,16 @@ void draw_console()
     pthread_mutex_unlock(&mutex);
 }
 
-void draw_current_state(RoadSegSlice roads, FireSlice fires, VegType vegType)
+void draw_current_state(RoadSegSlice roads, FireSlice fires, VegSlice vegetation)
 {
     current_roads = roads;
     current_fires = fires;
-    current_vegType = vegType;
+    current_vegetation = vegetation;
     draw_console();
-    write_to_textbox("%d", vegType);
+
+    LCoord lc = global_to_local(globalBounds.c2, globalBounds, scaled_vHeight(), scaled_vWidth());
+    GCoord gc = local_to_global(lc, globalBounds, scaled_vHeight(), scaled_vWidth());
+    write_to_textbox("lc: (%f, %f), gc: (%f, %f) -> gc: (%f, %f)", lc.x, lc.y, globalBounds.c2.lat, globalBounds.c2.lon, gc.lat, gc.lon);
 }
 
 void write_to_textbox(const char* format, ...)
@@ -825,7 +839,7 @@ void write_to_textbox(const char* format, ...)
     const int tWidth = scaled_tWidth();
     const int vWidth = scaled_vWidth();
     textBoxText = str_from(textBuffer);
-    draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight,
+    draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 1, tHeight,
               tWidth);
 }
 
