@@ -42,7 +42,7 @@ void draw_current_state(RoadSegSlice roads, FireSlice fires);
 ///Refreshes the console, and redraws everything
 void draw_console();
 ///This changes the content of the textbox that is displayed besides the gridmap
-void write_to_textbox(char*);
+void write_to_textbox(const char*, ...);
 
 ///Adds a function to a list of functions, the user can execute with an index input, into the console,
 ///the description is what is displayed in the text

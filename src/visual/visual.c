@@ -787,12 +787,20 @@ void draw_current_state(RoadSegSlice roads, FireSlice fires)
     draw_console();
 }
 
-void write_to_textbox(char* text)
+void write_to_textbox(const char* format, ...)
 {
+    va_list args;
+    va_start(args, format);
+    char textBuffer[strlen(format) + 100];
+    int amountWritten = vsprintf(textBuffer, format, args);
+    const char text[amountWritten + 1];
+    memcpy(text, textBuffer, sizeof(text));
+    va_end(args);
+
     const int tHeight = scaled_tHeight();
     const int tWidth = scaled_tWidth();
     const int vWidth = scaled_vWidth();
-    textBoxText = str_from(text);
+    textBoxText = str_from(textBuffer);
     draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 3, tHeight,
               tWidth);
 }
@@ -823,7 +831,6 @@ void execute_command()
         const int bracket = getchar();
         //used to clear the "[" from the buffer (there are better ways to do this but can't be arsed)
         const int nCode = getchar();
-
         if (nCode == 65)
         {
             if (selectedCmd == 0)
@@ -855,7 +862,7 @@ void execute_command()
             sscanf(readCmd.chars, "0;%d;%d", &mouseX, &mouseY);
             // printf(readCmd.chars);
             // printf("(x: %d, y: %d)", mouseX, mouseY);
-            int potIndex = mouseY - (height + 3);
+            int potIndex = mouseY - (scaled_height() + 3);
             if (potIndex >= 0 && potIndex < commands.len)
             {
                 char indexStr[10];
