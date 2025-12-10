@@ -166,7 +166,7 @@ int main()
     prepend_console_command(&stop_program, "EXIT");
     prepend_console_command(&draw_console, "REFRESH CONSOLE");
     prepend_console_command(&run_simulation, "RUN SIMULATION");
-    draw_current_state(roads, tempFires);
+    draw_current_state(roads, tempFires, veg_type);
     while (programIsRunning)
     {
         //This is just to get the program to shut up about it "not being modified in the loop"

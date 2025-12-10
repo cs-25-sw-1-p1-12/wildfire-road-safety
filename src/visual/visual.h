@@ -4,6 +4,7 @@
 #include "../models/fire.h"
 #include "../models/road.h"
 #include "../models/geo.h"
+#include "../models/vegetation.h"
 
 #define VIEWPORT_HEIGHT 50
 #define VIEWPORT_WIDTH 50
@@ -24,10 +25,14 @@
 
 
 #define ANSI_GREEN "\033[38;5;28m"
+#define ANSI_GREEN_LIGHT "\033[38;5;76m"
 #define ANSI_GRAY "\033[38;5;238m"
+#define ANSI_GRAY_LIGHT "\033[38;5;242m"
 #define ANSI_ORANGE "\033[38;5;202m"
 #define ANSI_PINK "\033[38;5;201m"
 #define ANSI_RED "\033[38;5;196m"
+#define ANSI_SAND "\033[38;5;228m"
+#define ANSI_WHITE "\033[38;5;255m"
 
 
 typedef struct
@@ -38,7 +43,7 @@ typedef struct
     char* bottomRight;
 } OutlineCorners;
 
-void draw_current_state(RoadSegSlice roads, FireSlice fires);
+void draw_current_state(RoadSegSlice roads, FireSlice fires, VegType vegType);
 ///Refreshes the console, and redraws everything
 void draw_console();
 ///This changes the content of the textbox that is displayed besides the gridmap

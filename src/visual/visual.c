@@ -153,6 +153,7 @@ int scaled_height()
 unsigned int selectedCmd = 0;
 RoadSegSlice current_roads;
 FireSlice current_fires;
+VegType current_vegType;
 
 typedef struct
 {
@@ -571,10 +572,30 @@ void draw_grid()
                 {
                     ansi_code = -1;
                     greenCount++;
-                    str_append(&gridContent, ANSI_GREEN);
+                    char* vegColor;
+                    switch (current_vegType)
+                    {
+                        case VEG_ROCK:
+                            vegColor = ANSI_GRAY_LIGHT;
+                            break;
+                        case VEG_SAND:
+                            vegColor = ANSI_SAND;
+                            break;
+                        case VEG_BUILDINGS:
+                            vegColor = ANSI_WHITE;
+                            break;
+                        case VEG_GRASS:
+                            vegColor = ANSI_GREEN_LIGHT;
+                            break;
+                        case VEG_FOREST:
+                            vegColor = ANSI_GREEN;
+                        default:
+                            vegColor = ANSI_PINK;
+                    }
+                    str_append(&gridContent, vegColor);
                 }
-                str_append(&gridContent, GRID_BLOCK_MEDIUM);
-                str_append(&gridContent, GRID_BLOCK_MEDIUM);
+                str_append(&gridContent, GRID_BLOCK_LIGHT);
+                str_append(&gridContent, GRID_BLOCK_LIGHT);
             }
         }
         str_append(&gridContent, "\033[1E");
@@ -700,8 +721,7 @@ void clean_up_console()
         {
             fast_print_args("\033[%dC", vWidth * 2 + 2);
             make_white_space_fast_print(TEXTBOX_OFFSET_X - 2);
-            if (textBoxText.len <= 0 &&
-                y >= TEXTBOX_OFFSET_Y && y < TEXTBOX_OFFSET_Y + tHeight)
+            if (y >= TEXTBOX_OFFSET_Y && y < TEXTBOX_OFFSET_Y + tHeight)
             {
                 fast_print_args("\033[%dC", 1);
                 make_white_space_fast_print(tWidth + 1);
@@ -731,6 +751,8 @@ void clean_up_console()
         fast_print_args("\033[%dC\033[0K\n", strlen(fullCmdText));
     }
     fast_print("\033[0J");
+
+    write_to_textbox(textBoxText.chars);
     fast_print("\e[u");
 }
 
@@ -780,11 +802,13 @@ void draw_console()
     pthread_mutex_unlock(&mutex);
 }
 
-void draw_current_state(RoadSegSlice roads, FireSlice fires)
+void draw_current_state(RoadSegSlice roads, FireSlice fires, VegType vegType)
 {
     current_roads = roads;
     current_fires = fires;
+    current_vegType = vegType;
     draw_console();
+    write_to_textbox("%d", vegType);
 }
 
 void write_to_textbox(const char* format, ...)
