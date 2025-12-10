@@ -33,6 +33,7 @@ typedef struct
 } BoundBox;
 
 LCoord global_to_local(GCoord gcoord, BoundBox bbox, size_t height, size_t width);
+GCoord local_to_global(LCoord lcoord, BoundBox bbox, size_t height, size_t width);
 
 /// Get a bbox around a global coordinate.
 /// The global coordinate will be the center of the bbox.

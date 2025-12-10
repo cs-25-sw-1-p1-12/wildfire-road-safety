@@ -20,6 +20,17 @@ LCoord global_to_local(GCoord gcoord, BoundBox bbox, size_t height, size_t width
     local.y = y;
     return local;
 }
+
+GCoord local_to_global(LCoord lcoord, BoundBox bbox, size_t height, size_t width)
+{
+    double horistontal = lcoord.x / ((double)width - 1);
+    double vertical = lcoord.y / ((double)height - 1);
+
+    double lon = horistontal * (bbox.c2.lon - bbox.c1.lon) + bbox.c1.lon;
+    double lat = (-vertical) * bbox.c2.lat + vertical * bbox.c1.lat + bbox.c2.lat;
+    return (GCoord){.lat = lat, .lon = lon};
+}
+
 void print_local(LCoord local)
 {
     double x = (double)local.x;
