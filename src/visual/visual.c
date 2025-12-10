@@ -33,13 +33,6 @@
 #define ANSI_BLUE "\033[34m"
 #define ANSI_NORMAL "\033[0m"
 
-
-#define ANSI_GREEN "\033[38;5;28m"
-#define ANSI_GRAY "\033[38;5;238m"
-#define ANSI_ORANGE "\033[38;5;202m"
-#define ANSI_PINK "\033[38;5;201m"
-#define ANSI_RED "\033[38;5;196m"
-
 /*
 185:╣
 186:║
@@ -456,6 +449,7 @@ bool road_has_road_at(RoadSegSlice road_data, LCoord point, double tolerance)
 
     return false;
 }
+
 bool fire_has_fire_at(FireSlice fire_data, LCoord point, double tolerance)
 {
     const FireSlice fires = fire_data;
@@ -463,10 +457,12 @@ bool fire_has_fire_at(FireSlice fire_data, LCoord point, double tolerance)
     {
         const LCoord n1 = fires.items[i].lcoord;
         double dst = sqrt(pow(point.y - n1.y, 2) + pow(point.x - n1.x, 2));
-        if (dst < tolerance) return  true;
+        if (dst < tolerance)
+            return true;
     }
     return false;
 }
+
 int get_road_risk(RoadSegSlice road_data, LCoord point, double tolerance)
 {
     RoadSegSlice roads = road_data;
@@ -519,15 +515,11 @@ void draw_grid()
     {
         for (int x = 0; x < w; x++)
         {
+            const double tolerance = 1.0;
             const LCoord lCoord = (LCoord){.x = (x / prctDiff.x), .y = (y / prctDiff.y)};
-            const bool isRoad = road_has_road_at(current_roads, lCoord, 0.5);
-            const bool isFire = fire_has_fire_at(current_fires, lCoord, 0.5);
-            if (!isRoad && !isFire && ansi_code != -1)
-            {
-                ansi_code = -1;
-                greenCount++;
-                str_append(&gridContent, ANSI_GREEN);
-            }
+            const bool isRoad = road_has_road_at(current_roads, lCoord, tolerance);
+            const bool isFire = fire_has_fire_at(current_fires, lCoord, tolerance);
+
             if (isFire)
             {
                 int code;
@@ -549,7 +541,7 @@ void draw_grid()
             }
             else if (isRoad)
             {
-                const int risk = get_road_risk(current_roads, lCoord, 0.5);
+                const int risk = get_road_risk(current_roads, lCoord, tolerance);
                 blueCount++;
                 int code;
                 int dummy1;
@@ -575,6 +567,12 @@ void draw_grid()
             }
             else
             {
+                if (ansi_code != -1)
+                {
+                    ansi_code = -1;
+                    greenCount++;
+                    str_append(&gridContent, ANSI_GREEN);
+                }
                 str_append(&gridContent, GRID_BLOCK_MEDIUM);
                 str_append(&gridContent, GRID_BLOCK_MEDIUM);
             }
@@ -822,7 +820,8 @@ void execute_command()
     fast_print(DISABLE_MOUSE_INPUT_ANSI);
     if (c == 27)
     {
-        int bracket = getchar();
+        const int bracket = getchar();
+        //used to clear the "[" from the buffer (there are better ways to do this but can't be arsed)
         const int nCode = getchar();
 
         if (nCode == 65)

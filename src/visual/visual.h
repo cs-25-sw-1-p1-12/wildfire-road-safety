@@ -23,6 +23,12 @@
 #define DISABLE_ALTERNATIVE_BUFFER_ANSI "\033[?1049l"
 
 
+#define ANSI_GREEN "\033[38;5;28m"
+#define ANSI_GRAY "\033[38;5;238m"
+#define ANSI_ORANGE "\033[38;5;202m"
+#define ANSI_PINK "\033[38;5;201m"
+#define ANSI_RED "\033[38;5;196m"
+
 
 typedef struct
 {
