@@ -441,9 +441,9 @@ bool road_has_road_at(RoadSegSlice road_data, LCoord point, double tolerance)
             if (j >= nodes.len - 1)
                 break;
 
-            Node node1 = nodes.items[j];
+            RoadNode node1 = nodes.items[j];
             LCoord node1LCoord = global_to_local(node1.coords, globalBounds, vHeight, vWidth);
-            Node node2 = nodes.items[j + 1];
+            RoadNode node2 = nodes.items[j + 1];
             LCoord node2LCoord = global_to_local(node2.coords, globalBounds, vHeight, vWidth);
 
 
@@ -480,9 +480,9 @@ int get_road_risk(RoadSegSlice road_data, LCoord point, double tolerance)
             if (j >= nodes.len - 1)
                 break;
 
-            Node node1 = nodes.items[j];
+            RoadNode node1 = nodes.items[j];
             LCoord node1LCoord = global_to_local(node1.coords, globalBounds, vHeight, vWidth);
-            Node node2 = nodes.items[j + 1];
+            RoadNode node2 = nodes.items[j + 1];
             LCoord node2LCoord = global_to_local(node2.coords, globalBounds, vHeight, vWidth);
 
 

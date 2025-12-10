@@ -147,15 +147,8 @@ int main()
     tempFires.items[1] = fire_area_2;
 
     assess_roads(&roads, tempFires);
-
-    slice_free(&tempFires);
-
     VegSlice veg_slice = {0};
 
-    set_bounding_box(bbox);
-    prepend_console_command(&stop_program, "EXIT");
-    prepend_console_command(&draw_console, "REFRESH CONSOLE");
-    prepend_console_command(&run_simulation, "RUN SIMULATION");
     if (!get_vegetation(bbox, &veg_slice))
         return 1;
 
@@ -169,6 +162,10 @@ int main()
 
     printf("FOUND VEGTYPE OF {tag: %d}\n", veg_type);
 
+    set_bounding_box(bbox);
+    prepend_console_command(&stop_program, "EXIT");
+    prepend_console_command(&draw_console, "REFRESH CONSOLE");
+    prepend_console_command(&run_simulation, "RUN SIMULATION");
     draw_current_state(roads, tempFires);
     while (programIsRunning)
     {
@@ -176,5 +173,6 @@ int main()
         programIsRunning = true;
         execute_command();
     }
+    slice_free(&tempFires);
     return 0;
 }
