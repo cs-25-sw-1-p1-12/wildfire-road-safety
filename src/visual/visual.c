@@ -562,21 +562,32 @@ void draw_grid()
                         case VEG_ROCK:
                             vegColor = ANSI_GRAY_LIGHT;
                             break;
+
                         case VEG_SAND:
                             vegColor = ANSI_SAND;
                             break;
+
                         case VEG_BUILDINGS:
                             vegColor = ANSI_WHITE;
                             break;
+
                         case VEG_GRASS:
                             vegColor = ANSI_GREEN_LIGHT;
                             break;
+
+                        case VEG_FARMLAND:
+                            vegColor = ANSI_YELLOW;
+                            break;
+
                         case VEG_FOREST:
                             vegColor = ANSI_GREEN;
+                            break;
+
                         default:
                             vegColor = ANSI_PINK;
                             if (veg_type != VEG_NONE)
                                 debug_log(WARNING, "VEG_TYPE COLOR MISSING, VEG_TYPE: %d", (int)veg_type);
+                            break;
                     }
                 }
                 grid_str_append_color(&gridContent, GRID_BLOCK_LIGHT, vegColor);

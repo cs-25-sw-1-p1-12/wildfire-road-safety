@@ -33,6 +33,7 @@
 #define ANSI_RED "\033[38;5;196m"
 #define ANSI_SAND "\033[38;5;228m"
 #define ANSI_WHITE "\033[38;5;255m"
+#define ANSI_YELLOW "\033[38;5;226m"
 
 
 typedef struct
