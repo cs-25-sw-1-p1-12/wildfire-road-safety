@@ -497,6 +497,16 @@ int get_road_risk(RoadSegSlice road_data, LCoord point, double tolerance)
     return -1;
 }
 
+char* previousColor = "";
+void grid_str_append_color(String* str, const char* chs, char* color)
+{
+    if (strcmp(color, previousColor) != 0)
+    {
+        previousColor = color;
+        str_append(str, color);
+    }
+        str_append(str, chs);
+}
 void draw_grid()
 {
     fast_print("\e[s");
@@ -505,13 +515,10 @@ void draw_grid()
     String gridContent = str_from("");
     fast_print("\033[2;2H");
 
-    int greenCount = 0;
     int blueCount = 0;
-    char* ANSI_CODE;
     const int h = scaled_vHeight();
     const int w = scaled_vWidth();
     const LCoord prctDiff = {.x = (double)w / vWidth, .y = (double)h / vHeight};
-    int ansi_code = -2;
     for (int y = 0; y < h; y++)
     {
         for (int x = 0; x < w; x++)
@@ -524,27 +531,12 @@ void draw_grid()
 
             if (isFire)
             {
-                int code;
-                int dummy1;
-                int dummy2;
-
-                ANSI_CODE = ANSI_RED;
-
-                sscanf(ANSI_CODE, "[%d;%d;%d", &dummy1, &dummy2, &code);
-                if (code != ansi_code)
-                {
-                    ansi_code = code;
-                    str_append(&gridContent, ANSI_CODE);
-                }
-
-                str_append(&gridContent, GRID_BLOCK);
+                grid_str_append_color(&gridContent, GRID_BLOCK, ANSI_RED);
                 str_append(&gridContent, GRID_BLOCK);
             }
             else if (isRoad)
             {
-                int code;
-                int dummy1;
-                int dummy2;
+                char* ANSI_CODE;
 
                 const int risk = get_road_risk(current_roads, lCoord, tolerance);
                 blueCount++;
@@ -555,23 +547,11 @@ void draw_grid()
                     ANSI_CODE = ANSI_PINK;
                 else
                     ANSI_CODE = ANSI_GRAY;
-
-
-                sscanf(ANSI_CODE, "[%d;%d;%d", &dummy1, &dummy2, &code);
-                if (code != ansi_code)
-                {
-                    ansi_code = code;
-                    str_append(&gridContent, ANSI_CODE);
-                }
-
-                str_append(&gridContent, GRID_BLOCK);
+                grid_str_append_color(&gridContent, GRID_BLOCK, ANSI_CODE);
                 str_append(&gridContent, GRID_BLOCK);
             }
             else
             {
-                int code;
-                int dummy1;
-                int dummy2;
                 char* vegColor = ANSI_GREEN;
                 VegType veg_type;
                 GCoord gCoord = local_to_global(lCoord, globalBounds, vHeight, vWidth);
@@ -595,17 +575,11 @@ void draw_grid()
                             vegColor = ANSI_GREEN;
                         default:
                             vegColor = ANSI_PINK;
-                            debug_log(WARNING, "VEG_TYPE COLOR MISSING, VEG_TYPE: %d", (int)veg_type);
+                            if (veg_type != VEG_NONE)
+                                debug_log(WARNING, "VEG_TYPE COLOR MISSING, VEG_TYPE: %d", (int)veg_type);
                     }
                 }
-                sscanf(vegColor, "[%d;%d;%d", &dummy1, &dummy2, &code);
-                if (ansi_code != code)
-                {
-                    ansi_code = code;
-                    greenCount++;
-                    str_append(&gridContent, vegColor);
-                }
-                str_append(&gridContent, GRID_BLOCK_LIGHT);
+                grid_str_append_color(&gridContent, GRID_BLOCK_LIGHT, vegColor);
                 str_append(&gridContent, GRID_BLOCK_LIGHT);
             }
         }
