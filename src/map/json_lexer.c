@@ -17,14 +17,8 @@ JsonToken json_lexer_next(JsonLexer* lex)
 {
     JsonToken token = (JsonToken){.tag = JSON_EOF};
 
-    size_t old_idx = 0;
     while (lex->idx < strlen(lex->buf))
     {
-        if (lex->idx != 0 && lex->idx == old_idx)
-            printf("INFI LOOP IN LEXER!!\n");
-
-        old_idx = lex->idx;
-
         char ch = lex->buf[lex->idx];
 
         if (is_whitespace(ch))
@@ -104,6 +98,11 @@ JsonToken json_lexer_next(JsonLexer* lex)
     return token;
 }
 
+JsonToken json_lexer_peek(JsonLexer lex)
+{
+    return json_lexer_next(&lex);
+}
+
 // TODO: Finish
 bool parse_string(JsonLexer* lex, JsonToken* token)
 {
@@ -172,15 +171,9 @@ bool parse_numerical(JsonLexer* lex, JsonToken* token)
 {
     String buf = {0};
 
-    size_t old_idx = 0;
-
     size_t idx = lex->idx;
     while (idx < strlen(lex->buf))
     {
-        if (idx == old_idx)
-            printf("INFI LOOP IN NUMBER PARSER!!!\n");
-        old_idx = idx;
-
         char ch = lex->buf[idx];
 
         if (is_whitespace(ch) || ch == ',')
@@ -243,16 +236,6 @@ void json_token_free(JsonToken tok)
     }
 }
 
-void expect_token(JsonToken got, JsonTokenType expect)
-{
-    assert(got.tag == expect && "Encountered unexpected token");
-}
-
-void expect_token_and_free(JsonToken got, JsonTokenType expect)
-{
-    expect_token(got, expect);
-    json_token_free(got);
-}
 
 bool is_whitespace(char ch)
 {

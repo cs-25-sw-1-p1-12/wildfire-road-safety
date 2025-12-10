@@ -7,3 +7,5 @@ cmake-build-debug
 .envrc
 shell.nix
 debug.log
+*_out.json
+.cache

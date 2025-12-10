@@ -3,6 +3,7 @@
 
 #include "../models/geo.h"
 #include "../models/road.h"
+#include "../models/vegetation.h"
 
 #include <stdbool.h>
 
@@ -10,6 +11,8 @@
 bool get_road_segments(BoundBox bbox, RoadSegSlice* slice);
 
 bool get_fire_areas(GCoord coord, FireSlice* fire_buf);
+
+bool get_vegetation(BoundBox bbox, VegSlice* veg_slice);
 
 bool get_wind_velocity(GCoord coord, Vec2* wind_buf);
 

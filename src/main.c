@@ -3,6 +3,7 @@
 #include "map/map.h"
 #include "models/fire.h"
 #include "models/road.h"
+#include "models/vegetation.h"
 #include "risk/risk.h"
 #include "visual/visual.h"
 #include "signal.h"
@@ -56,10 +57,12 @@ void signal_handler(int signalNum)
             debug_log(ERROR, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
             fprintf(stderr, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
             exit(EXIT_FAILURE);
+            break;
         case SIGFPE:
             debug_log(ERROR, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
             fprintf(stderr, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
             exit(EXIT_FAILURE);
+            break;
         default:
             debug_log(ERROR, "COULD NOT RECOGNISE SIGNAL");
             fprintf(stderr, "COULD NOT RECOGNISE SIGNAL");
@@ -110,15 +113,18 @@ int main()
 
 
     printf("\033[32mGetting fire data...\033[s\n\033[0m");
+    FireSlice fire_slice = {0};
     // UNCOMMENT ONLY WHEN TESTING API
     // MAKE SURE TO COMMENT OUT THE LINE BELOW WHEN NOT IN USE
-    //get_fire_areas(bbox2, &(FireSlice) {{},0}); // Rewrite JSON parser to create a FireSlice from this
+    get_fire_areas(bbox2,
+                   &fire_slice); // Rewrite JSON parser to create a FireSlice from this
 
     printf("\33[u\033[0J\033[32mSuccess!\033[0m\n");
 
     //
     // Temporary testing of assess_roads function
     //
+    FireSlice tempFires = slice_with_len(FireSlice, 2);
 
     // Handcrafted FireArea struct
     FireArea fire_area = (FireArea) {
@@ -136,17 +142,32 @@ int main()
         .weatherIndex = 0.75,
         .category = "WF"
     };
-    FireArea tmpFire[2];
-    tmpFire[0] = fire_area;
-    tmpFire[1] = fire_area_2;
-    FireSlice tempFires = slice_from(tmpFire, 2);
+
+    tempFires.items[0] = fire_area;
+    tempFires.items[1] = fire_area_2;
 
     assess_roads(&roads, tempFires);
+
+    slice_free(&tempFires);
+
+    VegSlice veg_slice = {0};
 
     set_bounding_box(bbox);
     prepend_console_command(&stop_program, "EXIT");
     prepend_console_command(&draw_console, "REFRESH CONSOLE");
     prepend_console_command(&run_simulation, "RUN SIMULATION");
+    if (!get_vegetation(bbox, &veg_slice))
+        return 1;
+
+    printf("FOUND %zu AREAS!\n", veg_slice.len);
+
+    GCoord check_coord = {.lat = 57.012879168843696, .lon = 9.991665773980634};
+
+    VegType veg_type;
+    if (!coord_has_vegetation(check_coord, &veg_type, &veg_slice, 0.001))
+        return 1;
+
+    printf("FOUND VEGTYPE OF {tag: %d}\n", veg_type);
 
     draw_current_state(roads, tempFires);
     while (programIsRunning)
@@ -155,6 +176,5 @@ int main()
         programIsRunning = true;
         execute_command();
     }
-    slice_free(&tempFires);
     return 0;
 }
