@@ -103,11 +103,11 @@ int main()
 
     debug_log(MESSAGE, "FOUND %zu ROADS!", roads.len);
 
-    size_t node_sum = 0;
+    size_t road_node_sum = 0;
     for (size_t i = 0; i < roads.len; i++)
-        node_sum += roads.items[i].nodes.len;
+        road_node_sum += roads.items[i].nodes.len;
 
-    debug_log(MESSAGE, "\tWITH %zu NODES", node_sum);
+    debug_log(MESSAGE, "\t\tWITH %zu NODES", road_node_sum);
 
 
 
@@ -155,6 +155,11 @@ int main()
         return 1;
 
     debug_log(MESSAGE, "FOUND %zu VEGETATION AREAS!", veg_slice.len);
+    size_t veg_node_sum = 0;
+    for (size_t i = 0; i < veg_slice.len; i++)
+        veg_node_sum += veg_slice.items[i].area.len;
+
+    debug_log(MESSAGE, "\t\tWITH %zu NODES", veg_node_sum);
 
     VegType max_type = VEG_NONE;
     for (size_t i = 0; i < veg_slice.len; i++)
