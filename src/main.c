@@ -103,6 +103,11 @@ int main()
 
     debug_log(MESSAGE, "FOUND %zu ROADS!", roads.len);
 
+    size_t node_sum = 0;
+    for (size_t i = 0; i < roads.len; i++)
+        node_sum += roads.items[i].nodes.len;
+
+    debug_log(MESSAGE, "\tWITH %zu NODES", node_sum);
 
 
 
