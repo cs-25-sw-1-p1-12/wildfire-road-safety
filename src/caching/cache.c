@@ -74,8 +74,13 @@ bool make_caches()
     stat(CACHE_DIR, &stat_res);
     if (!S_ISDIR(stat_res.st_mode))
     {
+#if WIN32
+        if (mkdir(CACHE_DIR) != 0)
+            return false;
+#else
         if (mkdir(CACHE_DIR, 0755) != 0)
             return false;
+#endif
     }
 
     FILE* file;
