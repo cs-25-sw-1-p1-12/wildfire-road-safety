@@ -55,14 +55,14 @@ void debug_log(const LOG_MESSAGE_TYPE messageType, char* format, ...)
     va_end(arg);
 
     str_push(&msg, '\n');
-    fprintf(logStream, msg.chars);
+    fprintf(logStream, "%s", msg.chars);
     fflush(logStream);
     str_free(&msg);
 }
 
 char* now()
 {
-    //https://stackoverflow.com/questions/5141960/get-the-current-time-in-c
+    // https://stackoverflow.com/questions/5141960/get-the-current-time-in-c
     time_t rawTime;
     time(&rawTime);
     struct tm* timeInfo = localtime(&rawTime);

@@ -5,11 +5,11 @@
 #include "models/road.h"
 #include "models/vegetation.h"
 #include "risk/risk.h"
-#include "visual/visual.h"
 #include "signal.h"
+#include "visual/visual.h"
 
-#include <stdio.h>
 #include <pthread.h>
+#include <stdio.h>
 #include <unistd.h>
 
 bool simIsRunning = false;
@@ -32,7 +32,7 @@ void run_simulation()
     // ReSharper disable once CppDFAConstantConditions
     while (simIsRunning)
     {
-        //DO STUFF
+        // DO STUFF
         simIsRunning = true;
         printf("SIM IS RUNNING!\n");
         sleep(1);
@@ -80,7 +80,7 @@ int main()
     // Bbox for area around Cassiopeia
     BoundBox bbox = (BoundBox){
         .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
-        .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
+        .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
     };
 
     printf("\e[?25l");
@@ -101,15 +101,12 @@ int main()
     printf("\33[u\033[0J\033[32mSuccess!\033[0m\n");
     debug_log(MESSAGE, "Success!");
 
-    printf("FOUND %zu ROADS\n", roads.len);
+    debug_log(MESSAGE, "FOUND %zu ROADS!", roads.len);
 
 
 
 
-    GCoord bbox2 = (GCoord) {
-        .lat = 38.788000,
-        .lon = -79.182000
-    };
+    GCoord bbox2 = (GCoord){.lat = 38.788000, .lon = -79.182000};
 
 
     printf("\033[32mGetting fire data...\033[s\n\033[0m");
@@ -127,17 +124,17 @@ int main()
     FireSlice tempFires = slice_with_len(FireSlice, 2);
 
     // Handcrafted FireArea struct
-    FireArea fire_area = (FireArea) {
-        .gcoord = (GCoord) {.lat = 1, .lon = 1},
-        .lcoord = (LCoord) {.x = 1, .y = 1},
+    FireArea fire_area = (FireArea){
+        .gcoord = (GCoord){.lat = 1, .lon = 1},
+        .lcoord = (LCoord){  .x = 1,   .y = 1},
         .temperature = 400,
         .weatherIndex = 0.41,
         .category = "WF"
     };
 
-    FireArea fire_area_2 = (FireArea) {
-        .gcoord = (GCoord) {.lat = 2, .lon = 2},
-        .lcoord = (LCoord) {.x = 2, .y = 2},
+    FireArea fire_area_2 = (FireArea){
+        .gcoord = (GCoord){.lat = 2, .lon = 2},
+        .lcoord = (LCoord){  .x = 2,   .y = 2},
         .temperature = 600,
         .weatherIndex = 0.75,
         .category = "WF"
@@ -152,6 +149,8 @@ int main()
     if (!get_vegetation(bbox, &veg_slice))
         return 1;
 
+    debug_log(MESSAGE, "FOUND %zu VEGETATION AREAS!", veg_slice.len);
+
     set_bounding_box(bbox);
     prepend_console_command(&stop_program, "EXIT");
     prepend_console_command(&draw_console, "REFRESH CONSOLE");
@@ -159,7 +158,7 @@ int main()
     draw_current_state(roads, tempFires, veg_slice);
     while (programIsRunning)
     {
-        //This is just to get the program to shut up about it "not being modified in the loop"
+        // This is just to get the program to shut up about it "not being modified in the loop"
         programIsRunning = true;
         execute_command();
     }

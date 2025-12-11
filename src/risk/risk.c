@@ -1,5 +1,7 @@
 #include "risk.h"
+
 #include "../models/road.h"
+
 #include <stdlib.h>
 
 static const double wildfireRiskMultiplier = 2;
@@ -16,14 +18,16 @@ void assess_roads(RoadSegSlice* roads, FireSlice fires)
         FireVec nearbyFires = {0};
         for (int fi = 0; fi < fires.len; fi++)
         {
-            if (GetFireDstToRoad(road, fires.items[fi]) > nearbyFireThreshold) continue;
+            if (GetFireDstToRoad(road, fires.items[fi]) > nearbyFireThreshold)
+                continue;
 
             vec_push(&nearbyFires, fires.items[fi]);
         }
 
         RoadRisk risk = assess_road(&road, &nearbyFires);
-        printf("Road with id '%llu' rated with a risk value of %d\n", road.id, road.risk);
-        debug_log(MESSAGE, "Road with id '%llu' rated with a risk value of %d", road.id, road.risk);
+        printf("Road with id '%zu' rated with a risk value of %d\n", road.id, road.risk);
+        // debug_log(MESSAGE, "Road with id '%llu' rated with a risk value of %d", road.id,
+        // road.risk);
         vec_free(nearbyFires);
         roads->items[i] = road;
     }
@@ -51,6 +55,6 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires)
         risk += localRisk;
     }
 
-    road->risk = (RoadRisk) risk;
-    return (RoadRisk) risk;
+    road->risk = (RoadRisk)risk;
+    return (RoadRisk)risk;
 }
