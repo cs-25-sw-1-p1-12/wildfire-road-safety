@@ -151,6 +151,18 @@ int main()
 
     debug_log(MESSAGE, "FOUND %zu VEGETATION AREAS!", veg_slice.len);
 
+    VegType max_type = VEG_NONE;
+    for (size_t i = 0; i < veg_slice.len; i++)
+    {
+        if (veg_slice.items[i].type >= max_type)
+            max_type = veg_slice.items[i].type;
+    }
+    debug_log(MESSAGE, "MAX VEGETATION TYPE AFTER PARSE: %d", max_type);
+    printf("DRAWING IMAGE\n");
+    debug_log(MESSAGE, "DRAWING IMAGE");
+    save_state_to_image("img_out.png", 512, roads, fire_slice, veg_slice);
+    debug_log(MESSAGE, "FINISHED IMAGE");
+
     set_bounding_box(bbox);
     prepend_console_command(&stop_program, "EXIT");
     prepend_console_command(&draw_console, "REFRESH CONSOLE");

@@ -15,30 +15,45 @@ typedef enum
     DIR_DOWN,
 } LineDir;
 
-BoundBox get_area_bbox(GPoly area);
-LineDir check_line_intersection(GCoord n1, GCoord n2, GCoord p, double tolerance);
 
-bool coord_has_vegetation(GCoord coord, VegType* type, VegSlice* data, double tolerance)
+BoundBox get_area_bbox(LPoly area);
+LineDir check_line_intersection(LCoord n1, LCoord n2, LCoord p, double tolerance);
+
+bool coord_has_vegetation(LCoord coord, VegType* type, VegSlice data, double tolerance,
+                          BoundBox gbbox, size_t width, size_t height)
 {
-    for (size_t i = 0; i < data->len; i++)
+    for (size_t i = 0; i < data.len; i++)
     {
-        if (is_coord_in_area(coord, data->items[i].area, tolerance))
+        LPoly larea = vec_with_capacity(LPoly, data.items[i].area.len);
+
+        for (size_t j = 0; j < data.items[i].area.len; j++)
         {
-            *type = data->items[i].type;
+            GCoord vert_gcoord = data.items[i].area.items[j];
+            LCoord vert_lcoord = global_to_local(vert_gcoord, gbbox, width, height);
+            vec_push(&larea, vert_lcoord);
+        }
+
+        if (is_coord_in_area(coord, larea, tolerance))
+        {
+            *type = data.items[i].type;
+
+            vec_free(larea);
             return true;
         }
+        vec_free(larea);
     }
 
+    *type = VEG_NONE;
     return false;
 }
 
-bool is_coord_in_area(GCoord coord, GPoly area, double tolerance)
+bool is_coord_in_area(LCoord coord, LPoly area, double tolerance)
 {
     // c1 has min values, c2 has max values
     BoundBox bbox = get_area_bbox(area);
 
-    if ((coord.lat < bbox.c1.lat - tolerance || coord.lat > bbox.c2.lat + tolerance) ||
-        (coord.lon < bbox.c1.lon - tolerance || coord.lon > bbox.c2.lon + tolerance))
+    if ((coord.y < bbox.c1.lat - tolerance || coord.y > bbox.c2.lat + tolerance) ||
+        (coord.x < bbox.c1.lon - tolerance || coord.x > bbox.c2.lon + tolerance))
         return false;
 
     if (area.len == 0)
@@ -46,82 +61,84 @@ bool is_coord_in_area(GCoord coord, GPoly area, double tolerance)
 
     if (area.len == 1)
     {
-        GCoord point = area.items[0];
-        if (coord.lat >= point.lat - tolerance || coord.lon <= point.lon + tolerance)
+        LCoord point = area.items[0];
+        if (coord.y >= point.y - tolerance || coord.x <= point.x + tolerance)
             return true;
-        else
-            return false;
+
+        return false;
     }
 
-    GCoord new_coord = coord;
-    while (new_coord.lon <= bbox.c2.lon)
+    LCoord new_coord = coord;
+    while (new_coord.x <= bbox.c2.lon)
     {
         for (size_t i = 0; i < area.len; i += 2)
         {
             LineDir line =
                 check_line_intersection(area.items[i], area.items[i + 1], new_coord, tolerance);
-            if (line == DIR_NONE)
-                continue;
-            else if (line == DIR_DOWN)
-                return false;
-            else if (line == DIR_UP)
-                return true;
+            switch (line)
+            {
+                case DIR_DOWN:
+                    return false;
+                case DIR_UP:
+                    return true;
+                case DIR_NONE:
+                    break;
+            }
         }
-        new_coord.lon += tolerance * 2;
+        new_coord.x += tolerance;
     }
     return false;
 }
 
-BoundBox get_area_bbox(GPoly area)
+BoundBox get_area_bbox(LPoly area)
 {
-    double min_lat = 0.;
-    double max_lat = 0.;
-    double min_lon = 0.;
-    double max_lon = 0.;
+    double min_y = 0.;
+    double max_y = 0.;
+    double min_x = 0.;
+    double max_x = 0.;
 
     for (size_t i = 0; i < area.len; i++)
     {
-        GCoord vert = area.items[i];
+        LCoord vert = area.items[i];
 
-        if (vert.lat < min_lat || min_lat == 0.)
-            min_lat = vert.lat;
+        if (vert.y < min_y || min_y == 0.)
+            min_y = vert.y;
 
-        if (vert.lat > max_lat || max_lat == 0.)
-            max_lat = vert.lat;
+        if (vert.y > max_y || max_y == 0.)
+            max_y = vert.y;
 
-        if (vert.lon < min_lon || min_lon == 0.)
-            min_lon = vert.lon;
+        if (vert.x < min_x || min_x == 0.)
+            min_x = vert.x;
 
-        if (vert.lon > max_lon || max_lon == 0.)
-            max_lon = vert.lon;
+        if (vert.x > max_x || max_x == 0.)
+            max_x = vert.x;
     }
 
     return (BoundBox){
-        .c1 = {.lat = min_lat, .lon = min_lon},
-          .c2 = {.lat = max_lat, .lon = max_lon}
+        .c1 = {.lat = min_y, .lon = min_x},
+          .c2 = {.lat = max_y, .lon = max_x}
     };
 }
 
-LineDir check_line_intersection(GCoord n1, GCoord n2, GCoord p, double tolerance)
+LineDir check_line_intersection(LCoord n1, LCoord n2, LCoord p, double tolerance)
 {
     // Check if in bounding box
-    if (p.lat > MAX(n1.lat, n2.lat) + tolerance || p.lat < MIN(n1.lat, n2.lat) - tolerance ||
-        p.lon > MAX(n1.lon, n2.lon) + tolerance || p.lon < MIN(n1.lon, n2.lon) - tolerance)
+    if (p.y > MAX(n1.y, n2.y) + tolerance || p.y < MIN(n1.y, n2.y) - tolerance ||
+        p.x > MAX(n1.x, n2.x) + tolerance || p.x < MIN(n1.x, n2.x) - tolerance)
         return DIR_NONE;
 
     // Formula from
     // https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
-    double numerator = fabs((n2.lon - n1.lon) * p.lat - (n2.lat - n1.lat) * p.lon +
-                            n2.lat * n1.lon - n2.lon * n1.lat);
+    double numerator = fabs((n2.x - n1.x) * p.y - (n2.y - n1.y) * p.x + n2.y * n1.x - n2.x * n1.y);
 
-    double denominator = sqrt(pow(n2.lon - n1.lon, 2) + pow(n2.lat - n1.lat, 2));
+    double denominator = sqrt(pow(n2.x - n1.x, 2) + pow(n2.y - n1.y, 2));
 
     double dist = numerator / denominator;
 
     if (dist > tolerance || dist < -tolerance)
         return DIR_NONE;
 
-    if (MIN(n1.lat, n2.lat) == n2.lat)
+    if (MIN(n1.y, n2.y) == n1.y)
         return DIR_DOWN;
     else
         return DIR_UP;

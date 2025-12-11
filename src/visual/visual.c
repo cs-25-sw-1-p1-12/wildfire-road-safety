@@ -1,15 +1,19 @@
 #include "visual.h"
 
+#define STBI_IMPLEMENTATION
+#include "../../vendor/stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../../vendor/stb_image_write.h"
 #include "../Debug/Logger.h"
 #include "../dyn.h"
-#include "../Debug/Logger.h"
 
 #include <math.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <unistd.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <unistd.h>
 #ifdef _WIN32
 #include <windows.h>
 #else // Linux & MacOS
@@ -18,18 +22,18 @@
 #include <unistd.h>
 #endif
 
-//https://stackoverflow.com/questions/6486289/how-to-clear-the-console-in-c
-//https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
-//https://stackoverflow.com/questions/917783/how-do-i-work-with-dynamic-multi-dimensional-arrays-in-c
-//https://www.cs.uleth.ca/~holzmann/C/system/ttyraw.c
-//https://superuser.com/questions/413073/windows-console-with-ansi-colors-handling
-//https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
-//https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Sixel-Graphics
-//https://stackoverflow.com/questions/14888027/mutex-lock-threads
-//https://www.geeksforgeeks.org/c/thread-functions-in-c-c/
+// https://stackoverflow.com/questions/6486289/how-to-clear-the-console-in-c
+// https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
+// https://stackoverflow.com/questions/917783/how-do-i-work-with-dynamic-multi-dimensional-arrays-in-c
+// https://www.cs.uleth.ca/~holzmann/C/system/ttyraw.c
+// https://superuser.com/questions/413073/windows-console-with-ansi-colors-handling
+// https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
+// https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Sixel-Graphics
+// https://stackoverflow.com/questions/14888027/mutex-lock-threads
+// https://www.geeksforgeeks.org/c/thread-functions-in-c-c/
 
-//#define ANSI_RED "\033[31m"
-//#define ANSI_GREEN "\033[32m"
+// #define ANSI_RED "\033[31m"
+// #define ANSI_GREEN "\033[32m"
 #define ANSI_BLUE "\033[34m"
 #define ANSI_NORMAL "\033[0m"
 
@@ -187,12 +191,12 @@ void monitor_resize_event()
     debug_log(MESSAGE, "RESIZE MONITOR WAS CREATED!");
     while (isMonitoring)
     {
-        //https://stackoverflow.com/questions/46658472/non-blocking-readconsoleinput
-        //https://stackoverflow.com/questions/10856926/sigwinch-equivalent-on-windows
-        //https://learn.microsoft.com/en-us/windows/console/reading-input-buffer-events
-        //https://stackoverflow.com/questions/6812224/getting-terminal-size-in-c-for-windows
-        //https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
-        //https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
+        // https://stackoverflow.com/questions/46658472/non-blocking-readconsoleinput
+        // https://stackoverflow.com/questions/10856926/sigwinch-equivalent-on-windows
+        // https://learn.microsoft.com/en-us/windows/console/reading-input-buffer-events
+        // https://stackoverflow.com/questions/6812224/getting-terminal-size-in-c-for-windows
+        // https://stackoverflow.com/questions/23369503/get-size-of-terminal-window-rows-columns
+        // https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
         double height = -1;
         double width = -1;
 #if WIN32
@@ -234,22 +238,22 @@ void init_console()
 #ifdef _WIN32
 
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    //Saves the console input settings,
-    //so it can be correctly reset on shutdown
+    // Saves the console input settings,
+    // so it can be correctly reset on shutdown
     GetConsoleMode(hInput, &defaultConsoleSettingsInput);
-    //Allows the windows console to receive and handle ANSI escape codes
+    // Allows the windows console to receive and handle ANSI escape codes
     SetConsoleMode(hInput, ENABLE_VIRTUAL_TERMINAL_INPUT);
 
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    //Saves the console output settings,
-    //so it can be correctly reset on shutdown
+    // Saves the console output settings,
+    // so it can be correctly reset on shutdown
     GetConsoleMode(hOutput, &defaultConsoleSettingsOutput);
-    //Allows the windows console to display and use ANSI escape codes
+    // Allows the windows console to display and use ANSI escape codes
     SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 
-    //Saves the console encoding, so it can be correctly reset on shutdown
+    // Saves the console encoding, so it can be correctly reset on shutdown
     defaultConsoleOutputType = GetConsoleOutputCP();
-    //Force the windows console to use UTF8 encoding
+    // Force the windows console to use UTF8 encoding
     SetConsoleOutputCP(UTF8CODE);
 
     /* THIS IS BORKED IN WINDOWS 11
@@ -265,10 +269,10 @@ void init_console()
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 #endif
-    //Shows mouse cursor (in the event it was hidden before initiation).
+    // Shows mouse cursor (in the event it was hidden before initiation).
     printf("\e[?25h");
     debug_log(MESSAGE, "Done!");
-    //Enable the alternative buffer. Aka removes the ability to scroll in the console.
+    // Enable the alternative buffer. Aka removes the ability to scroll in the console.
     printf(ENABLE_ALTERNATIVE_BUFFER_ANSI);
     consoleSize = get_terminal_size();
 }
@@ -278,9 +282,9 @@ void close_console()
     isMonitoring = false;
     pthread_join(reSizeMonitor, NULL);
     debug_log(MESSAGE, "start closing console...");
-    //Disable the alternative buffer
+    // Disable the alternative buffer
     printf(DISABLE_ALTERNATIVE_BUFFER_ANSI);
-    //Disable the detection of mouse inputs.
+    // Disable the detection of mouse inputs.
     printf(DISABLE_MOUSE_INPUT_ANSI);
     str_free(&textBoxText);
     vec_free(commands);
@@ -297,14 +301,14 @@ void close_console()
     debug_log(MESSAGE, "Done!");
 }
 
-///Writes directly to the console, is much faster than printf, does not use a buffer.
+/// Writes directly to the console, is much faster than printf, does not use a buffer.
 void fast_print(const char* format)
 {
-    //fputs(format, stdout);
+    // fputs(format, stdout);
     fwrite(format, strlen(format), 1, stdout);
 }
 
-///Writes directly to the console, this allows for arguments but is slightly slower than fast_print
+/// Writes directly to the console, this allows for arguments but is slightly slower than fast_print
 void fast_print_args(const char* format, ...)
 {
     va_list args;
@@ -319,12 +323,12 @@ void fast_print_args(const char* format, ...)
 
 BoundBox globalBounds = (BoundBox){
     .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
-    .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
+    .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
 };
 
 LCoord get_terminal_size()
 {
-    //https://stackoverflow.com/questions/74431114/get-terminal-size-using-ansi-escape-sequences/74432616#74432616
+    // https://stackoverflow.com/questions/74431114/get-terminal-size-using-ansi-escape-sequences/74432616#74432616
     fast_print("\033[s\033[9999;9999H");
     fast_print("\033[6n");
     const int c = getchar();
@@ -348,7 +352,7 @@ LCoord get_terminal_size()
 
 LCoord get_cursor_pos()
 {
-    //https://stackoverflow.com/questions/74431114/get-terminal-size-using-ansi-escape-sequences/74432616#74432616
+    // https://stackoverflow.com/questions/74431114/get-terminal-size-using-ansi-escape-sequences/74432616#74432616
     fast_print("\033[6n");
     const int c = getchar();
     if (c == 27)
@@ -486,11 +490,7 @@ int get_road_risk(RoadSegSlice road_data, LCoord point, double tolerance)
             double dist = get_point_dist_to_road(node1LCoord, node2LCoord, point, tolerance);
 
             if (dist >= -tolerance && dist <= tolerance)
-            {
-                debug_log(MESSAGE, "risk is: %d with the id: %d", roads.items[i].risk,
-                          roads.items[i].id);
                 return roads.items[i].risk;
-            }
         }
     }
 
@@ -505,15 +505,23 @@ void grid_str_append_color(String* str, const char* chs, char* color)
         previousColor = color;
         str_append(str, color);
     }
-        str_append(str, chs);
+    str_append(str, chs);
 }
 void draw_grid()
 {
     fast_print("\e[s");
     fast_print("\e[?25l");
-    //printf("\e[s");
+    // printf("\e[s");
     String gridContent = str_from("");
     fast_print("\033[2;2H");
+
+    VegType max_type = VEG_NONE;
+    for (size_t i = 0; i < current_vegetation.len; i++)
+    {
+        if (current_vegetation.items[i].type >= max_type)
+            max_type = current_vegetation.items[i].type;
+    }
+    debug_log(MESSAGE, "MAX VEGETATION TYPE BEFORE DRAW_GRID: %d", max_type);
 
     int blueCount = 0;
     const int h = scaled_vHeight();
@@ -553,12 +561,17 @@ void draw_grid()
             else
             {
                 char* vegColor = ANSI_GREEN;
-                VegType veg_type;
-                GCoord gCoord = local_to_global(lCoord, globalBounds, vHeight, vWidth);
-                if (!coord_has_vegetation(gCoord, &veg_type, &current_vegetation, 0.001))
+                VegType veg_type = VEG_NONE;
+                // GCoord gCoord = local_to_global(lCoord, globalBounds, vHeight, vWidth);
+                if (!coord_has_vegetation(lCoord, &veg_type, current_vegetation, tolerance,
+                                          globalBounds, vWidth, vHeight))
                 {
                     switch (veg_type)
                     {
+                        case VEG_NONE:
+                            vegColor = ANSI_GRAY_LIGHT;
+                            break;
+
                         case VEG_ROCK:
                             vegColor = ANSI_GRAY_LIGHT;
                             break;
@@ -583,10 +596,15 @@ void draw_grid()
                             vegColor = ANSI_GREEN;
                             break;
 
+                        case VEG_WATER:
+                            vegColor = ANSI_BLUE;
+                            break;
+
                         default:
                             vegColor = ANSI_PINK;
                             if (veg_type != VEG_NONE)
-                                debug_log(WARNING, "VEG_TYPE COLOR MISSING, VEG_TYPE: %d", (int)veg_type);
+                                debug_log(WARNING, "GRID: VEG_TYPE COLOR MISSING, VEG_TYPE: %d",
+                                          veg_type);
                             break;
                     }
                 }
@@ -599,9 +617,11 @@ void draw_grid()
     }
     str_append(&gridContent, ANSI_NORMAL);
     fast_print(gridContent.chars);
-    //(MESSAGE, "green: %d, blue: %d, total grid size: %d", greenCount, blueCount, vWidth * 2 * vHeight);
+    //(MESSAGE, "green: %d, blue: %d, total grid size: %d", greenCount, blueCount, vWidth * 2 *
+    // vHeight);
     str_free(&gridContent);
-    printf("\e[u");;
+    printf("\e[u");
+    ;
 }
 
 void draw_text(char* text, int line, int column, int height, int width)
@@ -672,10 +692,10 @@ void draw_outline(int line, int column, int height, int width, char* title, Outl
         str_append(&gridOutline, text);
         str_append(&gridOutline, VERT_LINE);
 
-        //DEBUG LINE NUMBER DISPLAY
-        // char num[1000];
-        // sprintf(num, " - %d", x + 1);
-        // str_append(&gridOutline, num);
+        // DEBUG LINE NUMBER DISPLAY
+        //  char num[1000];
+        //  sprintf(num, " - %d", x + 1);
+        //  str_append(&gridOutline, num);
     }
 
     str_append(&gridOutline, newline);
@@ -760,7 +780,7 @@ void draw_console()
     if (reSizeMonitor <= 0)
         pthread_create(&reSizeMonitor, NULL, (void*)&monitor_resize_event, NULL);
 
-    //Get draw space size adjusted to fit the screen size.
+    // Get draw space size adjusted to fit the screen size.
     const int vHeight = scaled_vHeight();
     const int tHeight = scaled_tHeight();
     const int tWidth = scaled_tWidth();
@@ -769,23 +789,21 @@ void draw_console()
 
     fast_print_args(" ");
     // fast_print_args(
-    //     "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST SLOW)",
-    //     ANSI_NORMAL);
+    //     "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST
+    //     SLOW)", ANSI_NORMAL);
     fast_print("\e[s");
     fast_print("\033[H");
     fast_print("\e[?25l");
     const OutlineCorners gridCorners = {TL_CORNER, TR_CORNER, BL_CORNER, UP_T_JUNC};
     draw_outline(1, 1, vHeight, vWidth * 2, "MAP", gridCorners);
     const OutlineCorners textboxCorners = {TL_CORNER, TR_CORNER, BL_CORNER, BR_CORNER};
-    draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X, tHeight, tWidth,
-                 "MESSAGE BOX",
+    draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X, tHeight, tWidth, "MESSAGE BOX",
                  textboxCorners);
     draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 1, tHeight,
               tWidth);
     String horiLine = str_from("");
     draw_horizontal_outline(&horiLine, height + 2, vWidth * 2 + 3,
-                            (int)consoleSize.x - (vWidth * 2 + 3),
-                            "");
+                            (int)consoleSize.x - (vWidth * 2 + 3), "");
     fast_print(horiLine.chars);
     str_free(&horiLine);
     draw_grid();
@@ -807,7 +825,8 @@ void draw_current_state(RoadSegSlice roads, FireSlice fires, VegSlice vegetation
 
     LCoord lc = global_to_local(globalBounds.c2, globalBounds, scaled_vHeight(), scaled_vWidth());
     GCoord gc = local_to_global(lc, globalBounds, scaled_vHeight(), scaled_vWidth());
-    write_to_textbox("lc: (%f, %f), gc: (%f, %f) -> gc: (%f, %f)", lc.x, lc.y, globalBounds.c2.lat, globalBounds.c2.lon, gc.lat, gc.lon);
+    write_to_textbox("lc: (%f, %f), gc: (%f, %f) -> gc: (%f, %f)", lc.x, lc.y, globalBounds.c2.lat,
+                     globalBounds.c2.lon, gc.lat, gc.lon);
 }
 
 void write_to_textbox(const char* format, ...)
@@ -828,13 +847,13 @@ void write_to_textbox(const char* format, ...)
               tWidth);
 }
 
-void prepend_console_command(void (*action), char* description)
+void prepend_console_command(void(*action), char* description)
 {
     const ConsoleCommands cmd = {action, description, commands.len};
     vec_unshift(&commands, cmd);
 }
 
-///Start detecting user inputs (keyboard or mouse) from the user.
+/// Start detecting user inputs (keyboard or mouse) from the user.
 void execute_command()
 {
     // const LCoord size = get_terminal_size();
@@ -852,7 +871,8 @@ void execute_command()
     if (c == 27)
     {
         const int bracket = getchar();
-        //used to clear the "[" from the buffer (there are better ways to do this but can't be arsed)
+        // used to clear the "[" from the buffer (there are better ways to do this but can't be
+        // arsed)
         const int nCode = getchar();
         if (nCode == 65)
         {
@@ -861,7 +881,7 @@ void execute_command()
             else
                 selectedCmd -= 1;
         }
-        //Up
+        // Up
         else if (nCode == 66)
         {
             selectedCmd += 1;
@@ -870,7 +890,7 @@ void execute_command()
         }
         else if (nCode == '<')
         {
-            //https://stackoverflow.com/questions/5966903/how-can-i-get-mousemove-and-mouseclick-in-bash/55437976#55437976
+            // https://stackoverflow.com/questions/5966903/how-can-i-get-mousemove-and-mouseclick-in-bash/55437976#55437976
             int mouseX = -1;
             int mouseY = -1;
 
@@ -912,8 +932,8 @@ void execute_command()
             else if (mouseX > 1 && mouseX < vWidth * 2 + 2 && mouseY > 1 && mouseY < vHeight + 2)
             {
                 mouseY = MIN(mouseY, vHeight);
-                mouseX = MIN(mouseX+2, vWidth*2) / 2;
-                //fast_print_args("that's inside the grid! (x: %d, y: %d)", mouseX, mouseY);
+                mouseX = MIN(mouseX + 2, vWidth * 2) / 2;
+                // fast_print_args("that's inside the grid! (x: %d, y: %d)", mouseX, mouseY);
             }
             str_free(&readCmd);
         }
@@ -928,20 +948,154 @@ void execute_command()
         commands.items[selectedCmd].triggerAction();
         cmdIsRunning = false;
     }
-    //THIS ALLOW NUM INPUTS TO SELECT COMMANDS, CAN CURRENTLY CAUSE THE APP
-    //TO SELECT THE WRONG COMMAND IF THE INPUT BUFFER  CONTAINS TO MANY CHARS
-    // else if (c >= 48 && c <= 57)
-    // {
-    //     int index = (c - 48);
-    //     if (index > 0 && index < commands.len)
-    //     {
-    //         debug_log(MESSAGE, "EXECUTING CMD WITH INDEX: %d", index);
-    //         if (commands.items[index].index != index) debug_log(ERROR, "COMMAND INDEX MISMATCH!");
-    //         commands.items[index].triggerAction();
-    //     }
-    // }
+    // THIS ALLOW NUM INPUTS TO SELECT COMMANDS, CAN CURRENTLY CAUSE THE APP
+    // TO SELECT THE WRONG COMMAND IF THE INPUT BUFFER  CONTAINS TO MANY CHARS
+    //  else if (c >= 48 && c <= 57)
+    //  {
+    //      int index = (c - 48);
+    //      if (index > 0 && index < commands.len)
+    //      {
+    //          debug_log(MESSAGE, "EXECUTING CMD WITH INDEX: %d", index);
+    //          if (commands.items[index].index != index) debug_log(ERROR, "COMMAND INDEX
+    //          MISMATCH!"); commands.items[index].triggerAction();
+    //      }
+    //  }
 
     fast_print("\e[l");
+}
+
+typedef SliceDef(uint8_t) PixelBuf;
+
+#define IMG_NONE 125, 150, 125
+#define IMG_FIRE 255, 100, 100
+#define IMG_ROAD 125, 125, 125
+#define IMG_ROAD_RISKY 200, 125, 125
+#define IMG_GRASS 50, 255, 50
+#define IMG_FOREST 10, 100, 10
+#define IMG_ROCK 200, 200, 200
+#define IMG_FARMLAND 200, 200, 50
+#define IMG_SAND 255, 255, 0
+#define IMG_BUILDINGS 50, 50, 50
+#define IMG_WATER 10, 100, 255
+#define IMG_PINK 255, 0, 255
+
+
+void set_pixel(PixelBuf* pixelbuf, size_t size, size_t x, size_t y, uint8_t r, uint8_t g, uint8_t b)
+{
+    // CREDIT: https://stackoverflow.com/a/76030032
+    size_t pixel_idx = 3 * (y * size + x);
+    pixelbuf->items[pixel_idx] = r;
+    pixelbuf->items[pixel_idx + 1] = g;
+    pixelbuf->items[pixel_idx + 2] = b;
+}
+
+void save_state_to_image(const char* path, size_t size, RoadSegSlice roads, FireSlice fires,
+                         VegSlice vegetation)
+{
+    current_roads = roads;
+    current_fires = fires;
+    current_vegetation = vegetation;
+
+    current_roads = roads;
+    current_fires = fires;
+    current_vegetation = vegetation;
+
+    VegType max_type = VEG_NONE;
+    for (size_t i = 0; i < current_vegetation.len; i++)
+    {
+        if (current_vegetation.items[i].type >= max_type)
+            max_type = current_vegetation.items[i].type;
+    }
+    debug_log(MESSAGE, "MAX VEGETATION TYPE BEFORE IMG: %d", max_type);
+
+
+
+    // Create an image of size x size dimensions
+    PixelBuf pixelbuf = slice_with_len(PixelBuf, size * size * 3);
+
+    int blueCount = 0;
+    const LCoord prctDiff = {.x = (double)size / vWidth, .y = (double)size / vHeight};
+    for (int y = 0; y < size; y++)
+    {
+        for (int x = 0; x < size; x++)
+        {
+            const double tolerance = 0.25;
+            const LCoord lCoord =
+                (LCoord){.x = (double)x / prctDiff.x, .y = (double)y / prctDiff.y};
+
+            const bool isRoad = road_has_road_at(current_roads, lCoord, tolerance);
+            const bool isFire = fire_has_fire_at(current_fires, lCoord, tolerance);
+
+
+            if (isFire)
+            {
+                set_pixel(&pixelbuf, size, x, y, IMG_FIRE);
+            }
+            else if (isRoad)
+            {
+                const int risk = get_road_risk(current_roads, lCoord, tolerance);
+
+                if (risk > 1)
+                    set_pixel(&pixelbuf, size, x, y, IMG_ROAD_RISKY);
+                else
+                    set_pixel(&pixelbuf, size, x, y, IMG_ROAD);
+            }
+            else
+            {
+                VegType veg_type;
+                // GCoord gCoord = local_to_global(lCoord, globalBounds, vHeight, vWidth);
+                if (!coord_has_vegetation(lCoord, &veg_type, current_vegetation, tolerance,
+                                          globalBounds, vWidth, vHeight))
+                {
+                    switch (veg_type)
+                    {
+                        case VEG_NONE:
+                            set_pixel(&pixelbuf, size, x, y, IMG_NONE);
+                            break;
+
+                        case VEG_ROCK:
+                            set_pixel(&pixelbuf, size, x, y, IMG_ROAD_RISKY);
+                            break;
+
+                        case VEG_SAND:
+                            set_pixel(&pixelbuf, size, x, y, IMG_ROAD_RISKY);
+                            break;
+
+                        case VEG_BUILDINGS:
+                            set_pixel(&pixelbuf, size, x, y, IMG_BUILDINGS);
+                            break;
+
+                        case VEG_GRASS:
+                            set_pixel(&pixelbuf, size, x, y, IMG_GRASS);
+                            break;
+
+                        case VEG_FARMLAND:
+                            set_pixel(&pixelbuf, size, x, y, IMG_FARMLAND);
+                            break;
+
+                        case VEG_FOREST:
+                            set_pixel(&pixelbuf, size, x, y, IMG_FOREST);
+                            break;
+
+                        case VEG_WATER:
+                            set_pixel(&pixelbuf, size, x, y, IMG_WATER);
+                            break;
+
+                        default:
+                            set_pixel(&pixelbuf, size, x, y, IMG_PINK);
+                            if (veg_type != VEG_NONE)
+                                debug_log(WARNING, "IMG: VEG_TYPE COLOR MISSING, VEG_TYPE: %d",
+                                          (int)veg_type);
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    stbi_write_png(path, size, size, 3, pixelbuf.items, size * 3);
+
+    slice_free(&pixelbuf);
 }
 
 void clear()

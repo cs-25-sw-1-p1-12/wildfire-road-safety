@@ -20,6 +20,8 @@ typedef struct
 /// A polygon, consisting of a list of global coordintes as its vertices
 typedef VecDef(GCoord) GPoly;
 
+typedef VecDef(LCoord) LPoly;
+
 typedef struct
 {
     double x;
