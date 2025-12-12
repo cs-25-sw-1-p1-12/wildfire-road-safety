@@ -531,7 +531,7 @@ void draw_grid()
     {
         for (int x = 0; x < w; x++)
         {
-            const double tolerance = 1.0;
+            const double tolerance = 0.5;
             const LCoord lCoord = (LCoord){.x = (x / prctDiff.x), .y = (y / prctDiff.y)};
             const bool isRoad = road_has_road_at(current_roads, lCoord, tolerance);
             const bool isFire = fire_has_fire_at(current_fires, lCoord, tolerance);
