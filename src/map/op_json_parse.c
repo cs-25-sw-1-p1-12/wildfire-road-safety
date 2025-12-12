@@ -400,7 +400,8 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
             expect_token(tok, JSON_KEY);
             assert(strcmp(tok.key, "nodes") == 0 && "Expected \"nodes\" key in json-object");
             json_token_free(tok);
-            expect_token(json_lexer_next(&lex), JSON_OPEN_LIST);
+
+            expect_token_and_free(json_lexer_next(&lex), JSON_OPEN_LIST);
 
             IdxVec inner_nodes = {0};
             while (true)

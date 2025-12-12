@@ -53,15 +53,16 @@ typedef struct
 
 void json_token_free(JsonToken tok);
 
-#define expect_token(got, expect)                                    \
-    {                                                                \
-        assert(got.tag == expect && "Encountered unexpected token"); \
+#define expect_token(got, expect)                                        \
+    {                                                                    \
+        assert((got).tag == (expect) && "Encountered unexpected token"); \
     }
 
-#define expect_token_and_free(got, expect)                           \
-    {                                                                \
-        assert(got.tag == expect && "Encountered unexpected token"); \
-        json_token_free(got);                                        \
+#define expect_token_and_free(got, expect)                                        \
+    {                                                                             \
+        JsonToken __expect_token = (got);                                         \
+        assert(__expect_token.tag == (expect) && "Encountered unexpected token"); \
+        json_token_free(__expect_token);                                          \
     }
 
 
