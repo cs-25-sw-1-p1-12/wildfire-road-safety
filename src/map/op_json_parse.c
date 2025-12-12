@@ -333,7 +333,7 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
 
             tok = json_lexer_next(&lex);
             expect_token(tok, JSON_NUMBER_VAL);
-            size_t id = (size_t)lround(tok.number_val);
+            size_t id = (size_t)llround(tok.number_val);
             json_token_free(tok);
 
             // LAT
@@ -392,7 +392,7 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
 
             tok = json_lexer_next(&lex);
             expect_token(tok, JSON_NUMBER_VAL);
-            size_t id = (size_t)lround(tok.number_val);
+            size_t id = (size_t)llround(tok.number_val);
             json_token_free(tok);
 
             // NODES
@@ -400,7 +400,7 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
             expect_token(tok, JSON_KEY);
             assert(strcmp(tok.key, "nodes") == 0 && "Expected \"nodes\" key in json-object");
             json_token_free(tok);
-            expect_token_and_free(json_lexer_next(&lex), JSON_OPEN_LIST);
+            expect_token(json_lexer_next(&lex), JSON_OPEN_LIST);
 
             IdxVec inner_nodes = {0};
             while (true)
@@ -415,18 +415,21 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
                 expect_token(tok, JSON_NUMBER_VAL);
 
                 size_t idx;
-                if (!find_node(&nodes, tok.number_val, &idx))
+                size_t node_id = (size_t)llround(tok.number_val);
+                if (!find_node(&nodes, node_id, &idx))
                 {
-                    debug_log(ERROR, "Failed to fine node with id: %0.lf", tok.number_val);
+                    debug_log(ERROR, "Failed to find node with id: %0.lf", tok.number_val);
                     // json_token_free(tok);
                     // expect_token_and_free(json_lexer_next(&lex),
                     //                       JSON_ITEM_DELIM); // Skip the , or reach ]
+                    json_token_free(tok);
                     continue;
                 }
 
                 vec_push(&inner_nodes, idx);
                 json_token_free(tok);
             }
+
 
 
             OpTagVec tags = {0};
