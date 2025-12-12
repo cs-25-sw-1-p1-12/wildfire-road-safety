@@ -78,11 +78,7 @@
 LCoord get_terminal_size();
 
 // These const exist due to some issue with Clion not interpreting them as actual numbers.
-const int vHeight = VIEWPORT_HEIGHT;
-const int tHeight = TEXTBOX_HEIGHT;
-const int vWidth = VIEWPORT_WIDTH;
-const int tWidth = TEXTBOX_WIDTH;
-const int height = (tHeight > vHeight) ? tHeight : vHeight;
+// const int tWidth = TEXTBOX_WIDTH;
 LCoord consoleSize;
 
 int scaled_vHeight()
@@ -95,7 +91,7 @@ int scaled_vHeight()
                 break;
             sleep(1);
         }
-    return (int)((double)vHeight * (consoleSize.y / CONSOLE_TARGET_HEIGHT));
+    return (int)((double)VIEWPORT_HEIGHT * (consoleSize.y / CONSOLE_TARGET_HEIGHT));
 }
 
 int scaled_vWidth()
@@ -108,7 +104,7 @@ int scaled_vWidth()
                 break;
             sleep(1);
         }
-    return (int)((double)vWidth * (consoleSize.x / CONSOLE_TARGET_WIDTH));
+    return (int)((double)VIEWPORT_WIDTH * (consoleSize.x / CONSOLE_TARGET_WIDTH));
 }
 
 int scaled_tHeight()
@@ -121,7 +117,7 @@ int scaled_tHeight()
                 break;
             sleep(1);
         }
-    return (int)((double)tHeight * (consoleSize.y / CONSOLE_TARGET_HEIGHT));
+    return (int)((double)TEXTBOX_HEIGHT * (consoleSize.y / CONSOLE_TARGET_HEIGHT));
 }
 
 int scaled_tWidth()
@@ -134,7 +130,7 @@ int scaled_tWidth()
                 break;
             sleep(1);
         }
-    return (int)((double)tWidth * (consoleSize.x / CONSOLE_TARGET_WIDTH));
+    return (int)((double)TEXTBOX_WIDTH * (consoleSize.x / CONSOLE_TARGET_WIDTH));
 }
 
 int scaled_height()
@@ -147,6 +143,7 @@ int scaled_height()
                 break;
             sleep(1);
         }
+    const int height = (TEXTBOX_HEIGHT > VIEWPORT_HEIGHT) ? TEXTBOX_HEIGHT : VIEWPORT_HEIGHT;
     return (int)((double)height * (consoleSize.y / CONSOLE_TARGET_HEIGHT));
 }
 
@@ -266,7 +263,7 @@ void init_console()
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 #endif
     //Shows mouse cursor (in the event it was hidden before initiation).
-    printf("\e[?25h");
+    printf(SHOW_CURSOR_ANSI);
     debug_log(MESSAGE, "Done!");
     //Enable the alternative buffer. Aka removes the ability to scroll in the console.
     printf(ENABLE_ALTERNATIVE_BUFFER_ANSI);
@@ -300,7 +297,6 @@ void close_console()
 ///Writes directly to the console, is much faster than printf, does not use a buffer.
 void fast_print(const char* format)
 {
-    //fputs(format, stdout);
     fwrite(format, strlen(format), 1, stdout);
 }
 
@@ -335,14 +331,14 @@ LCoord get_terminal_size()
 
         scanf("[%d;%dR", &line, &column);
 
-        fast_print("\e[u");
+        fast_print(RESTORE_CURSOR_STATE_ANSI);
         debug_log(MESSAGE, "%f", (float)line);
         if (line < 0 || column < 0)
             return (LCoord){.x = 0, .y = 0};
 
         return (LCoord){.x = column, .y = line};
     }
-    fast_print("\033[u");
+    fast_print(RESTORE_CURSOR_STATE_ANSI);
     return (LCoord){.x = 0, .y = 0};
 }
 
@@ -436,9 +432,11 @@ bool road_has_road_at(RoadSegSlice road_data, LCoord point, double tolerance)
                 break;
 
             RoadNode node1 = nodes.items[j];
-            LCoord node1LCoord = global_to_local(node1.coords, globalBounds, vHeight, vWidth);
+            LCoord node1LCoord = global_to_local(node1.coords, globalBounds, VIEWPORT_HEIGHT,
+                                                 VIEWPORT_WIDTH);
             RoadNode node2 = nodes.items[j + 1];
-            LCoord node2LCoord = global_to_local(node2.coords, globalBounds, vHeight, vWidth);
+            LCoord node2LCoord = global_to_local(node2.coords, globalBounds, VIEWPORT_HEIGHT,
+                                                 VIEWPORT_WIDTH);
 
 
             double dist = get_point_dist_to_road(node1LCoord, node2LCoord, point, tolerance);
@@ -478,9 +476,11 @@ int get_road_risk(RoadSegSlice road_data, LCoord point, double tolerance)
                 break;
 
             RoadNode node1 = nodes.items[j];
-            LCoord node1LCoord = global_to_local(node1.coords, globalBounds, vHeight, vWidth);
+            LCoord node1LCoord = global_to_local(node1.coords, globalBounds, VIEWPORT_HEIGHT,
+                                                 VIEWPORT_WIDTH);
             RoadNode node2 = nodes.items[j + 1];
-            LCoord node2LCoord = global_to_local(node2.coords, globalBounds, vHeight, vWidth);
+            LCoord node2LCoord = global_to_local(node2.coords, globalBounds, VIEWPORT_HEIGHT,
+                                                 VIEWPORT_WIDTH);
 
 
             double dist = get_point_dist_to_road(node1LCoord, node2LCoord, point, tolerance);
@@ -505,20 +505,20 @@ void grid_str_append_color(String* str, const char* chs, char* color)
         previousColor = color;
         str_append(str, color);
     }
-        str_append(str, chs);
+    str_append(str, chs);
 }
+
 void draw_grid()
 {
-    fast_print("\e[s");
-    fast_print("\e[?25l");
-    //printf("\e[s");
+    fast_print(SAVE_CURSOR_STATE_ANSI);
+    fast_print(HIDE_CURSOR_ANSI);
     String gridContent = str_from("");
     fast_print("\033[2;2H");
 
     int blueCount = 0;
     const int h = scaled_vHeight();
     const int w = scaled_vWidth();
-    const LCoord prctDiff = {.x = (double)w / vWidth, .y = (double)h / vHeight};
+    const LCoord prctDiff = {.x = (double)w / VIEWPORT_WIDTH, .y = (double)h / VIEWPORT_HEIGHT};
     for (int y = 0; y < h; y++)
     {
         for (int x = 0; x < w; x++)
@@ -554,7 +554,8 @@ void draw_grid()
             {
                 char* vegColor = ANSI_GREEN;
                 VegType veg_type;
-                GCoord gCoord = local_to_global(lCoord, globalBounds, vHeight, vWidth);
+                GCoord gCoord = local_to_global(lCoord, globalBounds, VIEWPORT_HEIGHT,
+                                                VIEWPORT_WIDTH);
                 if (!coord_has_vegetation(gCoord, &veg_type, &current_vegetation, 0.001))
                 {
                     switch (veg_type)
@@ -586,7 +587,8 @@ void draw_grid()
                         default:
                             vegColor = ANSI_PINK;
                             if (veg_type != VEG_NONE)
-                                debug_log(WARNING, "VEG_TYPE COLOR MISSING, VEG_TYPE: %d", (int)veg_type);
+                                debug_log(WARNING, "VEG_TYPE COLOR MISSING, VEG_TYPE: %d",
+                                          (int)veg_type);
                             break;
                     }
                 }
@@ -601,7 +603,7 @@ void draw_grid()
     fast_print(gridContent.chars);
     //(MESSAGE, "green: %d, blue: %d, total grid size: %d", greenCount, blueCount, vWidth * 2 * vHeight);
     str_free(&gridContent);
-    printf("\e[u");;
+    printf(RESTORE_CURSOR_STATE_ANSI);
 }
 
 void draw_text(char* text, int line, int column, int height, int width)
@@ -617,13 +619,10 @@ void draw_text(char* text, int line, int column, int height, int width)
 
     for (int i = 0; i < MIN(stringText.len, height * width); i++)
     {
-        char c[2] = {stringText.chars[i], '\0'};
-        str_append(&textBox, c);
-        int currentLineWidth = i % width;
+        str_push(&textBox, stringText.chars[i]);
+        const int currentLineWidth = i % width;
         if (currentLineWidth == width - 1)
-        {
             str_append(&textBox, newline);
-        }
     }
     fast_print(textBox.chars);
     str_free(&textBox);
@@ -646,6 +645,14 @@ void draw_horizontal_outline(String* string, int line, int column, int width, ch
     str_append(string, title);
     for (int i = 0; i < lengthMin; i++)
         str_append(string, HORI_LINE);
+}
+
+void fast_print_horizontal_outline(int line, int column, int width, char* title)
+{
+    String horiLine = str_from("");
+    draw_horizontal_outline(&horiLine, line, column, width, title);
+    fast_print(horiLine.chars);
+    str_free(&horiLine);
 }
 
 void draw_outline(int line, int column, int height, int width, char* title, OutlineCorners corners)
@@ -689,7 +696,7 @@ void draw_outline(int line, int column, int height, int width, char* title, Outl
 void draw_cmd()
 {
     const int height = scaled_height();
-    fast_print("\e[?25l");
+    fast_print(HIDE_CURSOR_ANSI);
     fast_print_args("\033[%d;0H", height + 3);
     for (int i = 0; i < commands.len; i++)
     {
@@ -699,7 +706,7 @@ void draw_cmd()
         if (selectedCmd == i)
             fast_print(ANSI_NORMAL);
     }
-    fast_print("\e[?25h");
+    fast_print(SHOW_CURSOR_ANSI);
 }
 
 void clean_up_console()
@@ -708,9 +715,9 @@ void clean_up_console()
     const int tWidth = scaled_tWidth();
     const int vWidth = scaled_vWidth();
     const int height = scaled_height();
-    fast_print("\e[s");
-    fast_print("\e[?25l");
-    fast_print("\033[H");
+    fast_print(SAVE_CURSOR_STATE_ANSI);
+    fast_print(HIDE_CURSOR_ANSI);
+    fast_print(MOVE_CURSOR_HOME_ANSI);
     for (int y = 0; y <= height; y++)
     {
         if (y >= TEXTBOX_OFFSET_Y - 1 && y <= TEXTBOX_OFFSET_Y + tHeight)
@@ -746,18 +753,19 @@ void clean_up_console()
         sprintf(fullCmdText, cmdText.chars, i);
         fast_print_args("\033[%dC\033[0K\n", strlen(fullCmdText));
     }
-    fast_print("\033[0J");
+    fast_print(ERASE_FROM_CURSOR_TO_BOTTOM);
 
     write_to_textbox(textBoxText.chars);
-    fast_print("\e[u");
+    fast_print(RESTORE_CURSOR_STATE_ANSI);
 }
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void draw_console()
 {
+    //Lock the thread so the resize thread don't accidentally starts multiple draw_console() functions.
     pthread_mutex_lock(&mutex);
-    if (reSizeMonitor <= 0)
+    if (reSizeMonitor <= 0) //Just checks if the resize thread is running & If not create it.
         pthread_create(&reSizeMonitor, NULL, (void*)&monitor_resize_event, NULL);
 
     //Get draw space size adjusted to fit the screen size.
@@ -767,34 +775,36 @@ void draw_console()
     const int vWidth = scaled_vWidth();
     const int height = scaled_height();
 
-    fast_print_args(" ");
-    // fast_print_args(
-    //     "%sIF YOU SEE THIS SOMETHING HAS GONE WRONG WITH THE CLEARING OF THE TUI! (OR IT'S JUST SLOW)",
-    //     ANSI_NORMAL);
-    fast_print("\e[s");
-    fast_print("\033[H");
-    fast_print("\e[?25l");
-    const OutlineCorners gridCorners = {TL_CORNER, TR_CORNER, BL_CORNER, UP_T_JUNC};
-    draw_outline(1, 1, vHeight, vWidth * 2, "MAP", gridCorners);
-    const OutlineCorners textboxCorners = {TL_CORNER, TR_CORNER, BL_CORNER, BR_CORNER};
+    //Some ANSI cmds should explain itself
+    fast_print(SAVE_CURSOR_STATE_ANSI);
+    fast_print(MOVE_CURSOR_HOME_ANSI);
+    fast_print(HIDE_CURSOR_ANSI);
+
+    //Draw the outline that is around the grid map, with the header "MAP"
+    draw_outline(1, 1, vHeight, vWidth * 2, "MAP",
+                 (OutlineCorners){TL_CORNER, TR_CORNER, BL_CORNER, UP_T_JUNC});
+    //Draw the outline that is around the textbox, with the header "MESSAGE BOX"
     draw_outline(TEXTBOX_OFFSET_Y, vWidth * 2 + TEXTBOX_OFFSET_X, tHeight, tWidth,
                  "MESSAGE BOX",
-                 textboxCorners);
+                 (OutlineCorners){TL_CORNER, TR_CORNER, BL_CORNER, BR_CORNER});
+    //Draw the text gotten from textBoxText inside the textbox outline
     draw_text(textBoxText.chars, TEXTBOX_OFFSET_Y + 1, vWidth * 2 + TEXTBOX_OFFSET_X + 1, tHeight,
               tWidth);
-    String horiLine = str_from("");
-    draw_horizontal_outline(&horiLine, height + 2, vWidth * 2 + 3,
-                            (int)consoleSize.x - (vWidth * 2 + 3),
-                            "");
-    fast_print(horiLine.chars);
-    str_free(&horiLine);
+    //Draw the line that separates the commands from the grid map and textbox
+    fast_print_horizontal_outline(height + 2, vWidth * 2 + 3, (int)consoleSize.x - (vWidth * 2 + 3),
+                                  "");
+
     draw_grid();
     draw_cmd();
-    clean_up_console();
-    fast_print("\033[0J");
-    fast_print("\e[u");
 
-    fast_print("\033[?30l");
+    //Clean up any characters that could have been left in the space between the elements.
+    clean_up_console();
+
+    //Some more commands
+    fast_print(ERASE_FROM_CURSOR_TO_BOTTOM);
+    fast_print(RESTORE_CURSOR_STATE_ANSI);
+
+    //Unlock the thread
     pthread_mutex_unlock(&mutex);
 }
 
@@ -807,7 +817,8 @@ void draw_current_state(RoadSegSlice roads, FireSlice fires, VegSlice vegetation
 
     LCoord lc = global_to_local(globalBounds.c2, globalBounds, scaled_vHeight(), scaled_vWidth());
     GCoord gc = local_to_global(lc, globalBounds, scaled_vHeight(), scaled_vWidth());
-    write_to_textbox("lc: (%f, %f), gc: (%f, %f) -> gc: (%f, %f)", lc.x, lc.y, globalBounds.c2.lat, globalBounds.c2.lon, gc.lat, gc.lon);
+    write_to_textbox("lc: (%f, %f), gc: (%f, %f) -> gc: (%f, %f)", lc.x, lc.y, globalBounds.c2.lat,
+                     globalBounds.c2.lon, gc.lat, gc.lon);
 }
 
 void write_to_textbox(const char* format, ...)
@@ -815,9 +826,7 @@ void write_to_textbox(const char* format, ...)
     va_list args;
     va_start(args, format);
     char textBuffer[strlen(format) + 100];
-    int amountWritten = vsprintf(textBuffer, format, args);
-    const char text[amountWritten + 1];
-    memcpy(text, textBuffer, sizeof(text));
+    vsprintf(textBuffer, format, args);
     va_end(args);
 
     const int tHeight = scaled_tHeight();
@@ -843,8 +852,8 @@ void execute_command()
     //     draw_console();
     //     consoleSize = size;
     // }
-    fast_print("\e[s");
-    fast_print("\e[?25l");
+    fast_print(SAVE_CURSOR_STATE_ANSI);
+    fast_print(HIDE_CURSOR_ANSI);
 
     fast_print(ENABLE_MOUSE_INPUT_ANSI);
     const int c = getchar();
@@ -909,10 +918,11 @@ void execute_command()
                     }
                 }
             }
-            else if (mouseX > 1 && mouseX < vWidth * 2 + 2 && mouseY > 1 && mouseY < vHeight + 2)
+            else if (mouseX > 1 && mouseX < VIEWPORT_WIDTH * 2 + 2 && mouseY > 1 && mouseY <
+                     VIEWPORT_HEIGHT + 2)
             {
-                mouseY = MIN(mouseY, vHeight);
-                mouseX = MIN(mouseX+2, vWidth*2) / 2;
+                mouseY = MIN(mouseY, VIEWPORT_HEIGHT);
+                mouseX = MIN(mouseX+2, VIEWPORT_WIDTH*2) / 2;
                 //fast_print_args("that's inside the grid! (x: %d, y: %d)", mouseX, mouseY);
             }
             str_free(&readCmd);
