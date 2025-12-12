@@ -497,9 +497,9 @@ int get_road_risk(RoadSegSlice road_data, LCoord point, double tolerance)
     return -1;
 }
 
-char* previousColor = "";
 void grid_str_append_color(String* str, const char* chs, char* color)
 {
+    static char* previousColor = "";
     if (strcmp(color, previousColor) != 0)
     {
         previousColor = color;
