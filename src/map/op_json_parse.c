@@ -403,23 +403,31 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
             expect_token_and_free(json_lexer_next(&lex), JSON_OPEN_LIST);
 
             IdxVec inner_nodes = {0};
-            while (tok.tag != JSON_CLOSE_LIST)
+            while (true)
             {
                 tok = json_lexer_next(&lex);
                 if (tok.tag == JSON_CLOSE_LIST)
+                {
+                    json_token_free(tok);
                     break;
+                }
 
                 expect_token(tok, JSON_NUMBER_VAL);
 
                 size_t idx;
                 if (!find_node(&nodes, tok.number_val, &idx))
                 {
-                    tok = json_lexer_next(&lex); // Skip the , or reach ]
+                    debug_log(ERROR, "Failed to fine node with id: %0.lf", tok.number_val);
+                    // json_token_free(tok);
+                    // expect_token_and_free(json_lexer_next(&lex),
+                    //                       JSON_ITEM_DELIM); // Skip the , or reach ]
                     continue;
                 }
 
                 vec_push(&inner_nodes, idx);
+                json_token_free(tok);
             }
+
 
             OpTagVec tags = {0};
             JsonToken peeked = json_lexer_peek(lex);
@@ -433,6 +441,8 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
                 }
             }
             json_token_free(peeked);
+
+            debug_log(MESSAGE, "WAY %zu: { nodes: %zu, tags: %zu }", id, inner_nodes.len, tags.len);
 
             OpWay way = {
                 .id = id,
@@ -460,6 +470,8 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
 
     *way_buf = (OpWaySlice)vec_owned_slice(ways);
     *node_buf = (OpNodeSlice)vec_owned_slice(nodes);
+
+    debug_log(MESSAGE, "PARSED %zu WAYS WITH %zu NODES", ways.len, nodes.len);
 
     vec_free(ways);
     vec_free(nodes);
