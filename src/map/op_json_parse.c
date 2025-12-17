@@ -257,6 +257,37 @@ bool vegetation_json_parse(char* input, VegSlice* veg_data)
             }
         }
 
+        if (vertices.len >= 2)
+        {
+            double dir_sum = 0;
+
+            for (size_t i = 0; i < vertices.len; i++)
+            {
+                if (i >= vertices.len - 1)
+                    break;
+
+                GCoord n1 = vertices.items[i];
+                GCoord n2 = vertices.items[i + 1];
+
+                dir_sum += (n2.lon - n1.lon) * (n2.lat + n2.lat);
+            }
+
+            if (dir_sum >= 0)
+            {
+                GCoord* coords = vec_clone_items(vertices);
+                size_t len = vertices.len;
+
+                vec_empty(&vertices);
+                // Reverse the list
+                for (size_t i = len - 1; i > 0; i--)
+                {
+                    vec_push(&vertices, coords[i]);
+                }
+
+                free(coords);
+            }
+        }
+
         VegData data = {
             .id = op_way.id,
             .type = veg_type,

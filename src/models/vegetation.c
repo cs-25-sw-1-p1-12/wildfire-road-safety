@@ -47,6 +47,14 @@ bool coord_has_vegetation(LCoord coord, VegType* type, VegSlice data, double tol
     return false;
 }
 
+typedef struct
+{
+    LCoord n1;
+    LCoord n2;
+} Line;
+
+typedef VecDef(Line) LineVec;
+
 bool is_coord_in_area(LCoord coord, LPoly area, double tolerance)
 {
     // c1 has min values, c2 has max values
@@ -68,26 +76,55 @@ bool is_coord_in_area(LCoord coord, LPoly area, double tolerance)
         return false;
     }
 
+    LineVec lines = {0};
+    size_t dupe_count = 0;
+
+    size_t hit_count = 0;
     LCoord new_coord = coord;
-    while (new_coord.x <= bbox.c2.lon)
+
+    while (new_coord.x <= bbox.c2.lon + tolerance * 2)
     {
-        for (size_t i = 0; i < area.len; i += 2)
+        for (size_t i = 0; i < area.len; i++)
         {
-            LineDir line =
+            if (i >= area.len - 1)
+                break;
+
+            LineDir line_dir =
                 check_line_intersection(area.items[i], area.items[i + 1], new_coord, tolerance);
-            switch (line)
+            switch (line_dir)
             {
                 case DIR_DOWN:
                     return false;
                 case DIR_UP:
+                    // bool is_dupe = false;
+                    // Line line = {.n1 = area.items[i], .n2 = area.items[i + 1]};
+                    // for (size_t i = 0; i < lines.len; i++)
+                    // {
+                    //     Line l = lines.items[i];
+                    //     if ((l.n1.x == line.n1.x && l.n1.y == line.n1.y) &&
+                    //         (l.n2.x == line.n2.x && l.n2.y == line.n2.y))
+                    //     {
+                    //         dupe_count += 1;
+                    //         is_dupe = true;
+                    //     }
+                    // }
+                    // if (!is_dupe)
+                    // {
+                    //     hit_count += 1;
+                    //     vec_push(&lines, line);
+                    // }
+                    // break;
                     return true;
                 case DIR_NONE:
                     break;
             }
         }
-        new_coord.x += tolerance;
+        new_coord.x += tolerance / 5;
     }
-    return false;
+    debug_log(MESSAGE, "DEBUG: Found %zu duplicate line hits!", dupe_count);
+    vec_free(lines);
+    return hit_count % 2 != 0;
+    // return false
 }
 
 BoundBox get_area_bbox(LPoly area)
@@ -137,9 +174,9 @@ LineDir check_line_intersection(LCoord n1, LCoord n2, LCoord p, double tolerance
 
     if (dist > tolerance || dist < -tolerance)
         return DIR_NONE;
-
-    if (MIN(n1.y, n2.y) == n1.y)
-        return DIR_DOWN;
-    else
+    // if ((n2.x - n1.x) * (n2.y + n2.y) >= 0)
+    else if (MIN(n1.y, n2.y) == n2.y)
         return DIR_UP;
+    else
+        return DIR_DOWN;
 }

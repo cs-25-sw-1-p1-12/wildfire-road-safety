@@ -2,6 +2,7 @@
 #include "dyn.h"
 #include "map/map.h"
 #include "models/fire.h"
+#include "models/geo.h"
 #include "models/road.h"
 #include "models/vegetation.h"
 #include "risk/risk.h"
@@ -27,7 +28,7 @@ void run_simulation()
 {
     clear();
     pthread_t stopCheckThread;
-    pthread_create(&stopCheckThread, NULL, simulation_stop_check_thread, NULL);
+    pthread_create(&stopCheckThread, NULL, (void*)simulation_stop_check_thread, NULL);
     simIsRunning = true;
     // ReSharper disable once CppDFAConstantConditions
     while (simIsRunning)
@@ -49,32 +50,32 @@ void stop_program()
     programIsRunning = false;
 }
 
-void signal_handler(int signalNum)
-{
-    switch (signalNum)
-    {
-        case SIGSEGV:
-            debug_log(ERROR, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
-            fprintf(stderr, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
-            exit(EXIT_FAILURE);
-            break;
-        case SIGFPE:
-            debug_log(ERROR, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
-            fprintf(stderr, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
-            exit(EXIT_FAILURE);
-            break;
-        default:
-            debug_log(ERROR, "COULD NOT RECOGNISE SIGNAL");
-            fprintf(stderr, "COULD NOT RECOGNISE SIGNAL");
-            break;
-    }
-}
+// void signal_handler(int signalNum)
+// {
+//     switch (signalNum)
+//     {
+//         case SIGSEGV:
+//             debug_log(ERROR, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
+//             fprintf(stderr, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
+//             exit(EXIT_FAILURE);
+//             break;
+//         case SIGFPE:
+//             debug_log(ERROR, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
+//             fprintf(stderr, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
+//             exit(EXIT_FAILURE);
+//             break;
+//         default:
+//             debug_log(ERROR, "COULD NOT RECOGNISE SIGNAL");
+//             fprintf(stderr, "COULD NOT RECOGNISE SIGNAL");
+//             break;
+//     }
+// }
 
 
 int main()
 {
-    signal(SIGSEGV, signal_handler);
-    signal(SIGFPE, signal_handler);
+    // signal(SIGSEGV, signal_handler);
+    // signal(SIGFPE, signal_handler);
     init_console();
 
     // Bbox for area around Cassiopeia
@@ -161,6 +162,24 @@ int main()
 
     debug_log(MESSAGE, "\t\tWITH %zu NODES", veg_node_sum);
 
+    // GCoord check_gcoord = {.lat = 57.012879168843696, .lon = 9.991665773980634};
+    GCoord check_gcoord = {.lat = 57.01410957399425, .lon = 9.992155908831906};
+
+    LCoord check_coord = global_to_local(check_gcoord, bbox, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+    VegType veg_type;
+    if (coord_has_vegetation(check_coord, &veg_type, veg_slice, 0.5, bbox, VIEWPORT_WIDTH,
+                             VIEWPORT_HEIGHT))
+    {
+        debug_log(MESSAGE, "FOUND VEGTYPE OF {tag: %d} FOR { x: %lf, y: %lf }", veg_type,
+                  check_coord.x, check_coord.y);
+    }
+    else
+    {
+        debug_log(MESSAGE, "COULDN'T FIND ANY VEGETATION DATA FOR { x: %lf, y: %lf }", veg_type,
+                  check_coord.x, check_coord.y);
+    }
+
     VegType max_type = VEG_NONE;
     for (size_t i = 0; i < veg_slice.len; i++)
     {
@@ -172,6 +191,9 @@ int main()
     debug_log(MESSAGE, "DRAWING IMAGE");
     save_state_to_image("img_out.png", 512, roads, fire_slice, veg_slice);
     debug_log(MESSAGE, "FINISHED IMAGE");
+    // debug_log(MESSAGE, "DRAWING VEG-ONLY IMAGE");
+    // save_veg_to_image("veg_img_out.png", 512, veg_slice, bbox);
+    // debug_log(MESSAGE, "FINISHED VEG-ONLY IMAGE");
 
     set_bounding_box(bbox);
     prepend_console_command(&stop_program, "EXIT");

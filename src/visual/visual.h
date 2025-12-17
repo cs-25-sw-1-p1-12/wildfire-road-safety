@@ -48,6 +48,8 @@ typedef struct
 void save_state_to_image(const char* path, size_t size, RoadSegSlice roads, FireSlice fires,
                          VegSlice vegetation);
 
+void save_veg_to_image(const char* path, size_t size, VegSlice vegetation, BoundBox bbox);
+
 void draw_current_state(RoadSegSlice roads, FireSlice fires, VegSlice vegetation);
 /// Refreshes the console, and redraws everything
 void draw_console();
