@@ -508,6 +508,8 @@ void grid_str_append_color(String* str, const char* chs, char* color)
     str_append(str, chs);
 }
 
+LCoord selectedCoord = (LCoord){.x = -1, .y = -1};
+
 void draw_grid()
 {
     fast_print(SAVE_CURSOR_STATE_ANSI);
@@ -527,9 +529,12 @@ void draw_grid()
             const LCoord lCoord = (LCoord){.x = (x / prctDiff.x), .y = (y / prctDiff.y)};
             const bool isRoad = road_has_road_at(current_roads, lCoord, tolerance);
             const bool isFire = fire_has_fire_at(current_fires, lCoord, tolerance);
-
-
-            if (isFire)
+            if (round(lCoord.x - selectedCoord.x) == 0 && round(lCoord.y - selectedCoord.y) == 0)
+            {
+                grid_str_append_color(&gridContent, GRID_BLOCK, ANSI_BLUE);
+                str_append(&gridContent, GRID_BLOCK);
+            }
+            else if (isFire)
             {
                 grid_str_append_color(&gridContent, GRID_BLOCK, ANSI_RED);
                 str_append(&gridContent, GRID_BLOCK);
@@ -817,8 +822,8 @@ void draw_current_state(RoadSegSlice roads, FireSlice fires, VegSlice vegetation
 
     LCoord lc = global_to_local(globalBounds.c2, globalBounds, scaled_vHeight(), scaled_vWidth());
     GCoord gc = local_to_global(lc, globalBounds, scaled_vHeight(), scaled_vWidth());
-    write_to_textbox("lc: (%f, %f), gc: (%f, %f) -> gc: (%f, %f)", lc.x, lc.y, globalBounds.c2.lat,
-                     globalBounds.c2.lon, gc.lat, gc.lon);
+    // write_to_textbox("lc: (%f, %f), gc: (%f, %f) -> gc: (%f, %f)", lc.x, lc.y, globalBounds.c2.lat,
+    //                  globalBounds.c2.lon, gc.lat, gc.lon);
 }
 
 void write_to_textbox(const char* format, ...)
@@ -918,11 +923,31 @@ void execute_command()
                     }
                 }
             }
-            else if (mouseX > 1 && mouseX < VIEWPORT_WIDTH * 2 + 2 && mouseY > 1 && mouseY <
-                     VIEWPORT_HEIGHT + 2)
+            else if (mouseX > 1 && mouseX < scaled_vWidth() * 2 + 2 && mouseY > 1 && mouseY <
+                     scaled_vHeight() + 2)
             {
-                mouseY = MIN(mouseY, VIEWPORT_HEIGHT);
-                mouseX = MIN(mouseX+2, VIEWPORT_WIDTH*2) / 2;
+                const int h = scaled_vHeight();
+                const int w = scaled_vWidth();
+                mouseY = MIN(mouseY, h) - 2;
+                mouseX = MIN(mouseX, w * 2) / 2 - 1;
+                const LCoord prctDiff = {.x = (double)w / VIEWPORT_WIDTH,
+                                         .y = (double)h / VIEWPORT_HEIGHT};
+                const LCoord lCoord = (LCoord){.x = ((double)mouseX / prctDiff.x),
+                                               .y = ((double)mouseY / prctDiff.y)};
+                selectedCoord = lCoord;
+                const int roadRisk = get_road_risk(current_roads, lCoord, 1);
+                String infoText = str_from("");
+                if (roadRisk >= 0)
+                {
+                    char* riskMsg = "Safe";
+                    if (roadRisk == 1)
+                        riskMsg = "Low";
+                    else if (roadRisk > 1)
+                        riskMsg = "High";
+                    str_appendf(&infoText, "Road risk: %s", riskMsg);
+                }
+                write_to_textbox(infoText.chars);
+                str_free(&infoText);
                 //fast_print_args("that's inside the grid! (x: %d, y: %d)", mouseX, mouseY);
             }
             str_free(&readCmd);
