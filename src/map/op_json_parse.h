@@ -9,5 +9,5 @@
 
 bool road_json_parse(char* input, RoadSegSlice* road_data);
 bool vegetation_json_parse(char* input, VegSlice* veg_data);
-
+bool fires_json_parse(char* input, FireSlice* fire_data);
 #endif // JSON_PARSE_H

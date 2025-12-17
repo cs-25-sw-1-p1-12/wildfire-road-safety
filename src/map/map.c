@@ -94,6 +94,11 @@ bool get_fire_areas(GCoord coord, FireSlice* fire_buf)
 
     printf("Received following from API call:\n%s\n", data_buf.chars);
 
+    if (!set_cache_data(CACHE_FIRE, data_buf))
+        debug_log(WARNING, "Failed to write fire cache data");
+
+    fires_json_parse(data_buf.chars, fire_buf);
+
     str_free(&data_buf);
 
     return true;

@@ -47,24 +47,47 @@ int main()
     printf("FOUND %zu ROADS\n", roads.len);
 
 
+<<<<<<< Updated upstream
 
 
     GCoord bbox2 = (GCoord){.lat = 38.788000, .lon = -79.182000};
 
     FireSlice fire_slice = {0};
+=======
+    printf("\033[32mGetting fire data...\033[s\n\033[0m");
+    FireSlice fires = {0};
+>>>>>>> Stashed changes
     // UNCOMMENT ONLY WHEN TESTING API
     // MAKE SURE TO COMMENT OUT THE LINE BELOW WHEN NOT IN USE
-    get_fire_areas(bbox2,
-                   &fire_slice); // Rewrite JSON parser to create a FireSlice from this
 
+    if (!get_fire_areas(bbox.c1, &fires))
+    {
+        debug_log(ERROR, "Failed!");
+        printf("\n\033[0mPress any key to exit program...");
+        printf("\033[31m\033[u Failed!");
+
+        getchar();
+        close_console();
+        printf("\e[?25h");
+    }
+    //get_fire_areas(bbox2, &fire_slice); // Rewrite JSON parser to create a FireSlice from this
+
+
+
+<<<<<<< Updated upstream
+=======
+    printf("\33[u\033[0J\033[32mSuccess!\033[0m\n");
+    debug_log(MESSAGE, "FOUND %zu FIRES!", fires.len);
+>>>>>>> Stashed changes
 
     //
     // Temporary testing of assess_roads function
     //
-    FireSlice tempFires = slice_with_len(FireSlice, 2);
+    //FireSlice tempFires = slice_with_len(FireSlice, 2);
+
 
     // Handcrafted FireArea struct
-    FireArea fire_area = (FireArea){
+    /*FireArea fire_area = (FireArea){
         .gcoord = (GCoord){.lat = 1, .lon = 1},
         .lcoord = (LCoord){  .x = 1,   .y = 1},
         .temperature = 400,
@@ -81,12 +104,16 @@ int main()
     };
 
     tempFires.items[0] = fire_area;
-    tempFires.items[1] = fire_area_2;
+    tempFires.items[1] = fire_area_2;*/
 
+<<<<<<< Updated upstream
     assess_roads(&roads, tempFires);
 
     slice_free(&tempFires);
 
+=======
+    assess_roads(&roads, fires);
+>>>>>>> Stashed changes
     VegSlice veg_slice = {0};
 
     if (!get_vegetation(bbox, &veg_slice))
@@ -102,5 +129,20 @@ int main()
 
     printf("FOUND VEGTYPE OF {tag: %d}\n", veg_type);
 
+<<<<<<< Updated upstream
+=======
+    set_bounding_box(bbox);
+    prepend_console_command(&stop_program, "EXIT");
+    prepend_console_command(&draw_console, "REFRESH CONSOLE");
+    prepend_console_command(&run_simulation, "RUN SIMULATION");
+    draw_current_state(roads, fires, veg_slice);
+    while (programIsRunning)
+    {
+        // This is just to get the program to shut up about it "not being modified in the loop"
+        programIsRunning = true;
+        //execute_command();
+    }
+    slice_free(&fires);
+>>>>>>> Stashed changes
     return 0;
 }

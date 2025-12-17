@@ -283,6 +283,73 @@ bool vegetation_json_parse(char* input, VegSlice* veg_data)
     return true;
 }
 
+bool fires_json_parse(char* input, FireSlice* fire_data)
+{
+    OpNodeSlice nodes = {0};
+    OpWaySlice ways = {0};
+
+    if (!generic_json_parse(input, &nodes, &ways))
+        return false;
+
+    FireVec fires = vec_with_capacity(FireVec, ways.len);
+    for (size_t i = 0; i < ways.len; i++)
+    {
+        OpWay op_way = ways.items[i];
+
+        // ti = tag index
+        GCoord gcoord = {0};
+        double temperature = 0.0;
+        double weatherIndex = 0.0;
+        String category = {0};
+        for (size_t ti = 0; ti < op_way.tags.len; ti++)
+        {
+            OpTag tag = op_way.tags.items[ti];
+            if (strcmp(tag.key, "lat") == 0)
+                gcoord.lat = strtod(tag.val, NULL);
+
+            if (strcmp(tag.key, "lng") == 0)
+                gcoord.lon = strtod(tag.val, NULL);
+
+            if (strcmp(tag.key, "temperature") == 0)
+                temperature = strtod(tag.val, NULL);
+
+            if (strcmp(tag.key, "weatherIndex") == 0)
+                weatherIndex = strtod(tag.val, NULL);
+
+            if (strcmp(tag.key, "fireCategory") == 0)
+                str_append(&category, tag.val);
+        }
+
+
+
+        FireArea fire = {
+            .gcoord = gcoord,
+            .temperature = temperature,
+            .weatherIndex = weatherIndex,
+            .category = category.chars
+        };
+
+        str_free(&category);
+
+        vec_push(&fires, fire);
+    }
+
+    *fire_data = (FireSlice)vec_owned_slice(fires);
+
+    for (size_t i = 0; i < nodes.len; i++)
+        free_op_node(nodes.items[i]);
+
+    for (size_t i = 0; i < ways.len; i++)
+        free_op_way(ways.items[i]);
+
+    slice_free(&nodes);
+    slice_free(&ways);
+
+    vec_free(fires);
+
+    return true;
+}
+
 bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
 {
     JsonLexer lex = (JsonLexer){
