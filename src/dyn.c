@@ -262,9 +262,12 @@ void str_remove_range(String* str, size_t start, size_t end)
 
 void str_empty(String* str)
 {
-    str->len = 0;
-    if (str->chars)
-        str->chars[0] = '\0';
+    if (str)
+    {
+        str->len = 0;
+        if (str->chars)
+            str->chars[0] = '\0';
+    }
 }
 
 void str_free(String* str)

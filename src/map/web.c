@@ -27,7 +27,9 @@ int send_overpass_request(String* output, char* url, OverpassData data_type, Bou
     CURLcode res = curl_easy_perform(curl_handle);
     if (res != CURLE_OK)
     {
-        output->chars = (char*)curl_easy_strerror(res);
+        const char* err_msg = curl_easy_strerror(res);
+        str_empty(output);
+        str_append(output, err_msg);
         return -1;
     }
 
@@ -60,8 +62,9 @@ int send_ambee_fire_request(String* output, GCoord coord)
     curl_easy_setopt(curl_handle, CURLOPT_URL, builtUrl);
 
     // Headers
-    struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, "x-api-key: 135f6b1fc2b545586ec79db94580c59874ca7bf7081c87e98370dc3190c33ac7");
+    struct curl_slist* headers = NULL;
+    headers = curl_slist_append(
+        headers, "x-api-key: 135f6b1fc2b545586ec79db94580c59874ca7bf7081c87e98370dc3190c33ac7");
     headers = curl_slist_append(headers, "Content-type: application/json");
 
     curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);

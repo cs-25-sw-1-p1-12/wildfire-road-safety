@@ -1,15 +1,19 @@
 #include "visual.h"
 
+#define STBI_IMPLEMENTATION
+#include "../../vendor/stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../../vendor/stb_image_write.h"
 #include "../Debug/Logger.h"
 #include "../dyn.h"
-#include "../Debug/Logger.h"
 
 #include <math.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <unistd.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <unistd.h>
 #ifdef _WIN32
 #include <windows.h>
 #else // Linux & MacOS
@@ -517,6 +521,15 @@ void draw_grid()
     String gridContent = str_from("");
     fast_print("\033[2;2H");
 
+    VegType max_type = VEG_NONE;
+    for (size_t i = 0; i < current_vegetation.len; i++)
+    {
+        if (current_vegetation.items[i].type >= max_type)
+            max_type = current_vegetation.items[i].type;
+    }
+    debug_log(MESSAGE, "MAX VEGETATION TYPE BEFORE DRAW_GRID: %d", max_type);
+
+
     int blueCount = 0;
     const int h = scaled_vHeight();
     const int w = scaled_vWidth();
@@ -557,14 +570,18 @@ void draw_grid()
             }
             else
             {
-                char* vegColor = ANSI_GREEN;
-                VegType veg_type;
-                GCoord gCoord = local_to_global(lCoord, globalBounds, VIEWPORT_HEIGHT,
-                                                VIEWPORT_WIDTH);
-                if (!coord_has_vegetation(gCoord, &veg_type, &current_vegetation, 0.001))
+                char* vegColor = ANSI_NORMAL;
+                VegType veg_type = VEG_NONE;
+                // GCoord gCoord = local_to_global(lCoord, globalBounds, vHeight, vWidth);
+                if (coord_has_vegetation(lCoord, &veg_type, current_vegetation, tolerance,
+                                         globalBounds, vWidth, vHeight))
                 {
                     switch (veg_type)
                     {
+                        case VEG_NONE:
+                            vegColor = ANSI_GRAY_LIGHT;
+                            break;
+
                         case VEG_ROCK:
                             vegColor = ANSI_GRAY_LIGHT;
                             break;
@@ -589,11 +606,15 @@ void draw_grid()
                             vegColor = ANSI_GREEN;
                             break;
 
+                        case VEG_WATER:
+                            vegColor = ANSI_BLUE;
+                            break;
+
                         default:
                             vegColor = ANSI_PINK;
                             if (veg_type != VEG_NONE)
-                                debug_log(WARNING, "VEG_TYPE COLOR MISSING, VEG_TYPE: %d",
-                                          (int)veg_type);
+                                debug_log(WARNING, "GRID: VEG_TYPE COLOR MISSING, VEG_TYPE: %d",
+                                          veg_type);
                             break;
                     }
                 }
@@ -606,7 +627,8 @@ void draw_grid()
     }
     str_append(&gridContent, ANSI_NORMAL);
     fast_print(gridContent.chars);
-    //(MESSAGE, "green: %d, blue: %d, total grid size: %d", greenCount, blueCount, vWidth * 2 * vHeight);
+    //(MESSAGE, "green: %d, blue: %d, total grid size: %d", greenCount, blueCount, vWidth * 2 *
+    // vHeight);
     str_free(&gridContent);
     printf(RESTORE_CURSOR_STATE_ANSI);
 }
@@ -627,7 +649,9 @@ void draw_text(char* text, int line, int column, int height, int width)
         str_push(&textBox, stringText.chars[i]);
         const int currentLineWidth = i % width;
         if (currentLineWidth == width - 1)
+        {
             str_append(&textBox, newline);
+        }
     }
     fast_print(textBox.chars);
     str_free(&textBox);
@@ -977,6 +1001,210 @@ void execute_command()
     // }
 
     fast_print("\e[l");
+}
+
+typedef SliceDef(uint8_t) PixelBuf;
+
+#define IMG_NONE 125, 150, 125
+#define IMG_FIRE 255, 100, 100
+#define IMG_ROAD 125, 125, 125
+#define IMG_ROAD_RISKY 200, 125, 125
+#define IMG_GRASS 50, 255, 50
+#define IMG_FOREST 10, 100, 10
+#define IMG_ROCK 200, 200, 200
+#define IMG_FARMLAND 200, 200, 50
+#define IMG_SAND 255, 255, 0
+#define IMG_BUILDINGS 50, 50, 50
+#define IMG_WATER 10, 100, 255
+#define IMG_PINK 255, 0, 255
+
+
+void set_pixel(PixelBuf* pixelbuf, size_t size, size_t x, size_t y, uint8_t r, uint8_t g, uint8_t b)
+{
+    // CREDIT: https://stackoverflow.com/a/76030032
+    size_t pixel_idx = 3 * (y * size + x);
+    pixelbuf->items[pixel_idx] = r;
+    pixelbuf->items[pixel_idx + 1] = g;
+    pixelbuf->items[pixel_idx + 2] = b;
+}
+
+void save_state_to_image(const char* path, size_t size, RoadSegSlice roads, FireSlice fires,
+                         VegSlice vegetation)
+{
+    current_roads = roads;
+    current_fires = fires;
+    current_vegetation = vegetation;
+
+    current_roads = roads;
+    current_fires = fires;
+    current_vegetation = vegetation;
+
+    VegType max_type = VEG_NONE;
+    for (size_t i = 0; i < current_vegetation.len; i++)
+    {
+        if (current_vegetation.items[i].type >= max_type)
+            max_type = current_vegetation.items[i].type;
+    }
+    debug_log(MESSAGE, "MAX VEGETATION TYPE BEFORE IMG: %d", max_type);
+
+
+
+    // Create an image of size x size dimensions
+    PixelBuf pixelbuf = slice_with_len(PixelBuf, size * size * 3);
+
+    int blueCount = 0;
+    VegType max_veg_type = VEG_NONE;
+    VegType min_veg_type = VEG_FOREST;
+    const LCoord prctDiff = {.x = (double)size / vWidth, .y = (double)size / vHeight};
+    for (int y = 0; y < size; y++)
+    {
+        for (int x = 0; x < size; x++)
+        {
+            const double tolerance = 0.50;
+            const LCoord lCoord =
+                (LCoord){.x = (double)x / prctDiff.x, .y = (double)y / prctDiff.y};
+
+            const bool isRoad = road_has_road_at(current_roads, lCoord, tolerance);
+            const bool isFire = fire_has_fire_at(current_fires, lCoord, tolerance);
+
+            if (isFire)
+            {
+                set_pixel(&pixelbuf, size, x, y, IMG_FIRE);
+            }
+            else if (isRoad)
+            {
+                const int risk = get_road_risk(current_roads, lCoord, tolerance);
+
+                if (risk > 1)
+                    set_pixel(&pixelbuf, size, x, y, IMG_ROAD_RISKY);
+                else
+                    set_pixel(&pixelbuf, size, x, y, IMG_ROAD);
+            }
+            else
+            {
+                VegType veg_type;
+                // GCoord gCoord = local_to_global(lCoord, globalBounds, vHeight, vWidth);
+                if (coord_has_vegetation(lCoord, &veg_type, current_vegetation, tolerance,
+                                         globalBounds, vWidth, vHeight))
+                {
+                    // debug_log(MESSAGE, "\t\tFOUND VT: {tag: %d}");
+                    max_veg_type = MAX(max_veg_type, veg_type);
+                    min_veg_type = MIN(min_veg_type, veg_type);
+                    switch (veg_type)
+                    {
+                        case VEG_NONE:
+                            set_pixel(&pixelbuf, size, x, y, IMG_NONE);
+                            break;
+
+                        case VEG_ROCK:
+                            set_pixel(&pixelbuf, size, x, y, IMG_ROAD_RISKY);
+                            break;
+
+                        case VEG_SAND:
+                            set_pixel(&pixelbuf, size, x, y, IMG_ROAD_RISKY);
+                            break;
+
+                        case VEG_BUILDINGS:
+                            set_pixel(&pixelbuf, size, x, y, IMG_BUILDINGS);
+                            break;
+
+                        case VEG_GRASS:
+                            set_pixel(&pixelbuf, size, x, y, IMG_GRASS);
+                            break;
+
+                        case VEG_FARMLAND:
+                            set_pixel(&pixelbuf, size, x, y, IMG_FARMLAND);
+                            break;
+
+                        case VEG_FOREST:
+                            set_pixel(&pixelbuf, size, x, y, IMG_FOREST);
+                            break;
+
+                        case VEG_WATER:
+                            set_pixel(&pixelbuf, size, x, y, IMG_WATER);
+                            break;
+
+                        default:
+                            set_pixel(&pixelbuf, size, x, y, 255, 255, 255);
+                            if (veg_type != VEG_NONE)
+                                debug_log(WARNING, "IMG: VEG_TYPE COLOR MISSING, VEG_TYPE: %d",
+                                          (int)veg_type);
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    debug_log(MESSAGE, "\t\tVT: MAX: {tag: %d}\tMIN: {tag: %d}\n", max_veg_type, min_veg_type);
+
+    stbi_write_png(path, size, size, 3, pixelbuf.items, size * 3);
+
+    slice_free(&pixelbuf);
+}
+
+void save_veg_to_image(const char* path, size_t size, VegSlice vegetation, BoundBox bbox)
+{
+    PixelBuf pixelbuf = slice_with_len(PixelBuf, size * size * 3);
+    const double tolerance = 1;
+
+    for (size_t x = 0; x < size; x++)
+    {
+        for (size_t y = 0; y < size; y++)
+        {
+            VegType veg_type;
+            LCoord lcoord = {.x = x, .y = y};
+            // GCoord gCoord = local_to_global(lCoord, globalBounds, vHeight, vWidth);
+            if (coord_has_vegetation(lcoord, &veg_type, current_vegetation, tolerance, bbox, size,
+                                     size))
+            {
+                switch (veg_type)
+                {
+                    case VEG_NONE:
+                        set_pixel(&pixelbuf, size, x, y, IMG_NONE);
+                        break;
+
+                    case VEG_ROCK:
+                        set_pixel(&pixelbuf, size, x, y, IMG_ROAD_RISKY);
+                        break;
+
+                    case VEG_SAND:
+                        set_pixel(&pixelbuf, size, x, y, IMG_ROAD_RISKY);
+                        break;
+
+                    case VEG_BUILDINGS:
+                        set_pixel(&pixelbuf, size, x, y, IMG_BUILDINGS);
+                        break;
+
+                    case VEG_GRASS:
+                        set_pixel(&pixelbuf, size, x, y, IMG_GRASS);
+                        break;
+
+                    case VEG_FARMLAND:
+                        set_pixel(&pixelbuf, size, x, y, IMG_FARMLAND);
+                        break;
+
+                    case VEG_FOREST:
+                        set_pixel(&pixelbuf, size, x, y, IMG_FOREST);
+                        break;
+
+                    case VEG_WATER:
+                        set_pixel(&pixelbuf, size, x, y, IMG_WATER);
+                        break;
+
+                    default:
+                        set_pixel(&pixelbuf, size, x, y, 255, 255, 255);
+                        if (veg_type != VEG_NONE)
+                            debug_log(WARNING, "IMG: VEG_TYPE COLOR MISSING, VEG_TYPE: %d",
+                                      (int)veg_type);
+                        break;
+                }
+            }
+        }
+    }
+    stbi_write_png(path, size, size, 3, pixelbuf.items, size * 3);
+
+    slice_free(&pixelbuf);
 }
 
 void clear()
