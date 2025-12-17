@@ -34,11 +34,92 @@ int main()
     signal(SIGSEGV, signal_handler);
     signal(SIGFPE, signal_handler);
 
-    // Bbox for area around Cassiopeia
-    BoundBox bbox = (BoundBox){
-        .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
-        .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
-    };
+
+
+    //
+    // Input handling
+    //
+    printf("To create a risk assessment, you will need to provide coordinates to form a square bounding box.\n");
+    printf("(A bounding box is made up of two coordinates, the top left corner of the box and the bottom right)\n\n");
+    printf("If you wish to test the application, enter -1000 below to use a predefined area.\n");
+    printf("To start, please provide the latitude of the first coordinate: ");
+
+    BoundBox bbox = {};
+    double inputVal = 0;
+    int coordsRead = 0;
+
+    while (coordsRead < 4)
+    {
+        const int result = scanf("%lf", &inputVal);
+
+        // Used for testing, sets the bounding box to around Cassiopeia
+        if (inputVal == -1000)
+        {
+            bbox = (BoundBox){
+                .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
+                .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
+            };
+
+            printf("Using coordinates for bounding box around Cassiopeia (~11cm precision):\ncoordinate 1: %.6f, %.6f\ncoordinate 2: %.6f, %.6f\n", bbox.c1.lat, bbox.c1.lon, bbox.c2.lat, bbox.c2.lon);
+
+            coordsRead = 4;
+        }
+
+        // Ensure the input is valid
+        if (result == 0 || inputVal == 0)
+        {
+            printf("Input error: Invalid double value.\n");
+            continue;
+        }
+
+        // Ensure the input is valid for latitude
+        if ((inputVal > 90 || inputVal < -90) && (coordsRead == 0 || coordsRead == 2))
+        {
+            printf("Input error: Latitude can only be between 90 and -90.\nPlease try a different value: ");
+            continue;
+        }
+
+        // Ensure the input is valid for longitude
+        if ((inputVal > 180 || inputVal < -180) && (coordsRead == 1 || coordsRead == 3))
+        {
+            printf("Input error: Longitude can only be between 180 and -180\nPlease try a different value: ");
+            continue;
+        }
+
+        switch (coordsRead)
+        {
+            case 0:
+                bbox.c1.lat = inputVal;
+                printf("Please provide the longitude of the first coordinate: ");
+                break;
+
+            case 1:
+                bbox.c1.lon = inputVal;
+                printf("Please provide the latitude of the second coordinate: ");
+                break;
+
+            case 2:
+                bbox.c2.lat = inputVal;
+                printf("Please provide the longitude of the second coordinate: ");
+                break;
+
+            case 3:
+                bbox.c2.lon = inputVal;
+                printf("All coordinates have been assigned, starting risk assessment with the following coordinates (~11cm precision):\ncoordinate 1: %.6f, %.6f\ncoordinate 2: %.6f, %.6f\n",
+                    bbox.c1.lat,
+                    bbox.c1.lon,
+                    bbox.c2.lat,
+                    bbox.c2.lon);
+                break;
+
+            default:
+                break;
+        }
+
+        coordsRead++;
+    }
+
+
 
     RoadSegSlice roads = {0};
     if (!get_road_segments(bbox, &roads))
@@ -46,15 +127,9 @@ int main()
 
     printf("FOUND %zu ROADS\n", roads.len);
 
-
-
-
-    GCoord bbox2 = (GCoord){.lat = 38.788000, .lon = -79.182000};
-
     FireSlice fire_slice = {0};
-    // UNCOMMENT ONLY WHEN TESTING API
-    // MAKE SURE TO COMMENT OUT THE LINE BELOW WHEN NOT IN USE
-    get_fire_areas(bbox2,
+
+    get_fire_areas(bbox.c1,
                    &fire_slice); // Rewrite JSON parser to create a FireSlice from this
 
 
@@ -63,7 +138,7 @@ int main()
     //
     FireSlice tempFires = slice_with_len(FireSlice, 2);
 
-    // Handcrafted FireArea struct
+    // Handcrafted FireArea struct, to be replaced by the return of get_fire_areas above
     FireArea fire_area = (FireArea){
         .gcoord = (GCoord){.lat = 1, .lon = 1},
         .lcoord = (LCoord){  .x = 1,   .y = 1},
