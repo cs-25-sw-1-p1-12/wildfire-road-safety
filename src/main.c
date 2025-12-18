@@ -76,13 +76,96 @@ int main()
 {
     signal(SIGSEGV, signal_handler);
     signal(SIGFPE, signal_handler);
-    init_console();
+    
+    //
+    // Input handling
+    //
+    printf("To create a risk assessment, you will need to provide coordinates to form a square "
+           "bounding box.\n");
+    printf("(A bounding box is made up of two coordinates, the top left corner of the box and the "
+           "bottom right)\n\n");
+    printf("If you wish to test the application, enter -1000 below to use a predefined area.\n");
+    printf("To start, please provide the latitude of the first coordinate: ");
 
-    // Bbox for area around Cassiopeia
-    BoundBox bbox = (BoundBox){
-        .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
-        .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
-    };
+    BoundBox bbox = {};
+    double inputVal = 0;
+    int coordsRead = 0;
+
+    while (coordsRead < 4)
+    {
+        const int result = scanf("%lf", &inputVal);
+
+        // Used for testing, sets the bounding box to around Cassiopeia
+        if (inputVal == -1000)
+        {
+            bbox = (BoundBox){
+                .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
+                .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
+            };
+
+            printf("Using coordinates for bounding box around Cassiopeia (~11cm "
+                   "precision):\ncoordinate 1: %.6f, %.6f\ncoordinate 2: %.6f, %.6f\n",
+                   bbox.c1.lat, bbox.c1.lon, bbox.c2.lat, bbox.c2.lon);
+
+            coordsRead = 4;
+        }
+
+        // Ensure the input is valid
+        if (result == 0 || inputVal == 0)
+        {
+            printf("Input error: Invalid double value.\n");
+            continue;
+        }
+
+        // Ensure the input is valid for latitude
+        if ((inputVal > 90 || inputVal < -90) && (coordsRead == 0 || coordsRead == 2))
+        {
+            printf("Input error: Latitude can only be between 90 and -90.\nPlease try a different "
+                   "value: ");
+            continue;
+        }
+
+        // Ensure the input is valid for longitude
+        if ((inputVal > 180 || inputVal < -180) && (coordsRead == 1 || coordsRead == 3))
+        {
+            printf("Input error: Longitude can only be between 180 and -180\nPlease try a "
+                   "different value: ");
+            continue;
+        }
+
+        switch (coordsRead)
+        {
+            case 0:
+                bbox.c1.lat = inputVal;
+                printf("Please provide the longitude of the first coordinate: ");
+                break;
+
+            case 1:
+                bbox.c1.lon = inputVal;
+                printf("Please provide the latitude of the second coordinate: ");
+                break;
+
+            case 2:
+                bbox.c2.lat = inputVal;
+                printf("Please provide the longitude of the second coordinate: ");
+                break;
+
+            case 3:
+                bbox.c2.lon = inputVal;
+                printf("All coordinates have been assigned, starting risk assessment with the "
+                       "following coordinates (~11cm precision):\ncoordinate 1: %.6f, "
+                       "%.6f\ncoordinate 2: %.6f, %.6f\n",
+                       bbox.c1.lat, bbox.c1.lon, bbox.c2.lat, bbox.c2.lon);
+                break;
+
+            default:
+                break;
+        }
+
+        coordsRead++;
+    }
+
+    init_console();
 
     printf("\e[?25l");
     printf("\033[32mGetting road data...\033[s\n\033[0m");
@@ -101,7 +184,7 @@ int main()
     }
     printf("\33[u\033[0J\033[32mSuccess!\033[0m\n");
     debug_log(MESSAGE, "Success!");
-
+    printf("FOUND %zu ROADS\n", roads.len);
     debug_log(MESSAGE, "FOUND %zu ROADS!", roads.len);
 
     size_t road_node_sum = 0;
@@ -117,9 +200,8 @@ int main()
 
     printf("\033[32mGetting fire data...\033[s\n\033[0m");
     FireSlice fire_slice = {0};
-    // UNCOMMENT ONLY WHEN TESTING API
-    // MAKE SURE TO COMMENT OUT THE LINE BELOW WHEN NOT IN USE
-    get_fire_areas(bbox2,
+
+    get_fire_areas(bbox.c1,
                    &fire_slice); // Rewrite JSON parser to create a FireSlice from this
 
     printf("\33[u\033[0J\033[32mSuccess!\033[0m\n");
@@ -129,7 +211,7 @@ int main()
     //
     FireSlice tempFires = slice_with_len(FireSlice, 2);
 
-    // Handcrafted FireArea struct
+    // Handcrafted FireArea struct, to be replaced by the return of get_fire_areas above
     FireArea fire_area = (FireArea){
         .gcoord = local_to_global((LCoord){.x = 1, .y = 1}, bbox, VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
         .lcoord = (LCoord){  .x = 1,   .y = 1},
@@ -139,8 +221,8 @@ int main()
     };
 
     FireArea fire_area_2 = (FireArea){
-        .gcoord = local_to_global((LCoord){  .x = VIEWPORT_WIDTH / 2,   .y =  VIEWPORT_HEIGHT / 2}, bbox, VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
-        .lcoord = (LCoord){  .x = VIEWPORT_WIDTH / 2,   .y =  VIEWPORT_HEIGHT / 2},
+        .gcoord = local_to_global((LCoord){  .x = (double)VIEWPORT_WIDTH / 2,   .y =  (double)VIEWPORT_HEIGHT / 2}, bbox, VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
+        .lcoord = (LCoord){  .x = (double)VIEWPORT_WIDTH / 2,   .y =  (double)VIEWPORT_HEIGHT / 2},
         .temperature = 600,
         .weatherIndex = 0.75,
         .category = "WF"
@@ -150,16 +232,18 @@ int main()
     tempFires.items[1] = fire_area_2;
 
     assess_roads(&roads, tempFires);
+
+    slice_free(&tempFires);
+
     VegSlice veg_slice = {0};
 
     if (!get_vegetation(bbox, &veg_slice))
         return 1;
-
+    printf("FOUND %zu AREAS!\n", veg_slice.len);
     debug_log(MESSAGE, "FOUND %zu VEGETATION AREAS!", veg_slice.len);
     size_t veg_node_sum = 0;
     for (size_t i = 0; i < veg_slice.len; i++)
         veg_node_sum += veg_slice.items[i].area.len;
-
     debug_log(MESSAGE, "\t\tWITH %zu NODES", veg_node_sum);
 
     // GCoord check_gcoord = {.lat = 57.012879168843696, .lon = 9.991665773980634};
@@ -168,7 +252,7 @@ int main()
     LCoord check_coord = global_to_local(check_gcoord, bbox, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
     VegType veg_type;
-    if (coord_has_vegetation(check_coord, &veg_type, veg_slice, 0.5, bbox, VIEWPORT_WIDTH,
+    if (coord_has_vegetation(check_coord, &veg_type, veg_slice, 0.001, bbox, VIEWPORT_WIDTH,
                              VIEWPORT_HEIGHT))
     {
         debug_log(MESSAGE, "FOUND VEGTYPE OF {tag: %d} FOR { x: %lf, y: %lf }", veg_type,
@@ -180,6 +264,7 @@ int main()
                   check_coord.x, check_coord.y);
     }
 
+    printf("FOUND VEGTYPE OF {tag: %d}\n", veg_type);
     VegType max_type = VEG_NONE;
     for (size_t i = 0; i < veg_slice.len; i++)
     {

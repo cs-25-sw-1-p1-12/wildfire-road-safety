@@ -33,6 +33,9 @@ typedef struct
     RoadRisk risk;
     /// The reason for the risk of the road
     RoadRiskReason risk_reason;
+    /// The speed limit of the raod in m/s. If the road doesn't have a specified speed limit, this
+    /// value is set to 0.
+    double speed_limit;
     /// The name of the road.
     /// The pointer is NULL if the road does not have a name specified.
     char* name;
