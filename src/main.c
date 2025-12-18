@@ -60,7 +60,11 @@ int main()
                 .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
             };
 
-            printf("Using coordinates for bounding box around Cassiopeia (~11cm precision):\ncoordinate 1: %.6f, %.6f\ncoordinate 2: %.6f, %.6f\n", bbox.c1.lat, bbox.c1.lon, bbox.c2.lat, bbox.c2.lon);
+            printf("Using coordinates for bounding box around Cassiopeia (~11cm precision):\ncoordinate 1: %.6f, %.6f\ncoordinate 2: %.6f, %.6f\n", 
+                bbox.c1.lat, 
+                bbox.c1.lon, 
+                bbox.c2.lat, 
+                bbox.c2.lon);
 
             coordsRead = 4;
         }

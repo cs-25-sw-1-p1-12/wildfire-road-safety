@@ -2,6 +2,21 @@
 # Wildfire Road Safety
 This project aims to assist in the creation of risk assesments during evacuation of people on roads in the event of an emerging wildfire.
 
+## Installation & usage
+
+### Installation
+To install the project on a local machine, download the repository by clicking on the green code button at the top of this repository page. This will show a menu where you can click on "Download ZIP". This will download the project to your desired location as a .zip file. Once the download has finished, unzip the file.
+
+Now that the project has been downloaded on your local machine and has been unzipped, you can go ahead and run the application. The built application can be found in the directory `/cmake-build-debug/src/` under the name `wfrs`.
+
+
+### Usage
+
+To use the application when it is running, you will first be prompted to input a set of coordinates to form a bounding box confining the area you want to search for wildfires and create risk assessments for. This is done by first inputting the latitude of the first coordinate, then the longitude. The same will be required for the second coordinate once the first coordinate has been filled out.
+
+After the information has been provided to the application, a TUI will appear that will consist of a map, a text field and a command field. Here, every road can be inspected simply by clicking on it. This will show the risk value of the road as well as some of the data used to calculate the risk value.
+
+To exit the application, simply use the command field to exit the application.
 
 ## Contributing
 

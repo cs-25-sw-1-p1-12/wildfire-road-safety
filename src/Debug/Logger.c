@@ -55,7 +55,7 @@ void debug_log(const LOG_MESSAGE_TYPE messageType, char* format, ...)
     va_end(arg);
 
     str_push(&msg, '\n');
-    fprintf(logStream, msg.chars);
+    fprintf(logStream, "%s", msg.chars);
     fflush(logStream);
     str_free(&msg);
 }
