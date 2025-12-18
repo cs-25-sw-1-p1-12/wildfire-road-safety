@@ -167,7 +167,7 @@ int main()
 
     init_console();
 
-    printf("\e[?25l");
+    printf(MOVE_CURSOR_HOME_ANSI"\e[?25l");
     printf("\033[32mGetting road data...\033[s\n\033[0m");
     debug_log(MESSAGE, "Getting road data...");
     RoadSegSlice roads = {0};
@@ -231,9 +231,6 @@ int main()
     tempFires.items[0] = fire_area;
     tempFires.items[1] = fire_area_2;
 
-    assess_roads(&roads, tempFires);
-
-    slice_free(&tempFires);
 
     VegSlice veg_slice = {0};
 
@@ -280,10 +277,13 @@ int main()
     // save_veg_to_image("veg_img_out.png", 512, veg_slice, bbox);
     // debug_log(MESSAGE, "FINISHED VEG-ONLY IMAGE");
 
+
+
     set_bounding_box(bbox);
     prepend_console_command(&stop_program, "EXIT");
     prepend_console_command(&draw_console, "REFRESH CONSOLE");
     prepend_console_command(&run_simulation, "RUN SIMULATION");
+    assess_roads(&roads, tempFires, veg_slice);
     draw_current_state(roads, tempFires, veg_slice);
     while (programIsRunning)
     {

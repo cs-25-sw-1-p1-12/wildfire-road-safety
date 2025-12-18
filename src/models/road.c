@@ -17,11 +17,11 @@ GCoord GCoord_to_kilometer(GCoord gCoord)
 }
 GCoord closest_point_on_segment(const GCoord a, const GCoord b, const GCoord p) {
     //https://chatgpt.com/
-    const double ABx = b.lat - a.lat;
-    const double ABy = b.lon - a.lon;
+    const double ABy = b.lat - a.lat;
+    const double ABx = b.lon - a.lon;
 
-    const double APx = p.lat - a.lat;
-    const double APy = p.lon - a.lon;
+    const double APy = p.lat - a.lat;
+    const double APx = p.lon - a.lon;
 
     const double ab2 = ABx * ABx + ABy * ABy;
     const double ap_ab = APx * ABx + APy * ABy;
@@ -31,8 +31,8 @@ GCoord closest_point_on_segment(const GCoord a, const GCoord b, const GCoord p) 
     if (t > 1.0) t = 1.0;
 
     GCoord coord;
-    coord.lat = a.lat + ABx * t;
-    coord.lon = a.lon + ABy * t;
+    coord.lat = a.lat + ABy * t;
+    coord.lon = a.lon + ABx * t;
 
     return coord;
 }
@@ -64,25 +64,24 @@ double haversine(GCoord c1, GCoord c2)
     return rad * c;
 }
 
-double get_point_dst(GCoord _n1, GCoord _n2, GCoord _p, double tolerance)
+RoadNode* get_closest_road_node(RoadSeg road, GCoord p)
 {
-    GCoord n1 = GCoord_to_kilometer(_n1);
-    GCoord n2 = GCoord_to_kilometer(_n2);
-    GCoord p = GCoord_to_kilometer(_p);
-    // Check if in bounding box
-    if (p.lat > MAX(n1.lat, n2.lat) + tolerance || p.lat < MIN(n1.lat, n2.lat) - tolerance ||
-        p.lon > MAX(n1.lon, n2.lon) + tolerance || p.lon < MIN(n1.lon, n2.lon) - tolerance)
-        return INFINITY;
-
-    // Formula from
-    // https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
-    double numerator = fabs(
-        (n2.lon - n1.lon) * p.lat - (n2.lat - n1.lat) * p.lon + n2.lat * n1.lon - n2.lon * n1.lat);
-
-    double denominator = sqrt(pow(n2.lon - n1.lon, 2) + pow(n2.lat - n1.lat, 2));
-
-    if (numerator < 52 / pow(10, 5)) return INFINITY;
-    return numerator / denominator;
+    double distance = INFINITY;
+    RoadNode* node = NULL;
+    for (int i = 0; i < road.nodes.len - 1; i++)
+    {
+        GCoord coord = closest_point_on_segment(road.nodes.items[i].coords, road.nodes.items[i + 1].coords, p);
+        // debug_log(MESSAGE, "coord: (%lf, %lf)", coord.lat, coord.lon);
+        double dst = haversine(p, coord);
+        if (distance > dst)
+        {
+            distance = dst;
+            node = &road.nodes.items[i];
+        }
+    }
+    if (distance >= INFINITY)
+        return NULL;
+    return node;
 }
 
 double GetFireDstToRoad(RoadSeg road, FireArea fire)

@@ -16,6 +16,7 @@
 #include <unistd.h>
 #ifdef _WIN32
 #include <windows.h>
+#undef ERROR
 #else // Linux & MacOS
 #include <sys/ioctl.h>
 #include <termios.h>
@@ -315,12 +316,17 @@ void fast_print_args(const char* format, ...)
     memcpy(text, textBuffer, sizeof(text));
     va_end(args);
     fast_print(text);
+
 }
 
 BoundBox globalBounds = (BoundBox){
     .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
     .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
 };
+// BoundBox get_visual_bound_box()
+// {
+//     return globalBounds;
+// }
 
 LCoord get_terminal_size()
 {
@@ -592,8 +598,7 @@ void draw_grid()
             const bool isFire = fire_has_fire_at(current_fires, lCoord, tolerance);
             if (round(lCoord.x - selectedCoord.x) == 0 && round(lCoord.y - selectedCoord.y) == 0)
             {
-                grid_str_append_color(&gridContent, GRID_BLOCK, ANSI_BLUE);
-                str_append(&gridContent, GRID_BLOCK);
+                grid_str_append_color(&gridContent, GRID_BLOCK GRID_BLOCK, ANSI_BLUE);
                 const size_t compareId = localRoadId;
                 if (isRoad)
                 {
@@ -609,8 +614,7 @@ void draw_grid()
             }
             else if (isFire)
             {
-                grid_str_append_color(&gridContent, GRID_BLOCK, ANSI_RED);
-                str_append(&gridContent, GRID_BLOCK);
+                grid_str_append_color(&gridContent, GRID_BLOCK GRID_BLOCK, ANSI_RED);
             }
             else if (isRoad)
             {
@@ -619,17 +623,9 @@ void draw_grid()
                 const int risk = get_road_risk(current_roads, lCoord, tolerance);
                 blueCount++;
 
-                if (risk > 10)
-                    ANSI_CODE = ANSI_RED;
-                else if (risk > 5)
-                    ANSI_CODE = ANSI_ORANGE;
-                else if (risk < 0)
-                    ANSI_CODE = ANSI_PINK;
-                else
-                    ANSI_CODE = ANSI_GRAY;
-
-                if (risk != 0)
+                if (risk > RISK_THRESHOLD_MEDIUM)
                 {
+                    ANSI_CODE = risk > RISK_THRESHOLD_HIGH ? ANSI_RED : ANSI_ORANGE;
                     char* backColor = (localRoadName != NULL && roadSeg->name != NULL &&
                                        strcmp(localRoadName, roadSeg->name) == 0)
                                           ? ANSI_DARK_BLUE_BACKGROUND
@@ -641,8 +637,14 @@ void draw_grid()
                     grid_str_append_color(&gridContent, "！", ANSI_CODE);
                     //Ｘ https://www.compart.com/en/unicode/block/U+FF00
                 }
+                else if (risk < 0)
+                {
+                    ANSI_CODE = ANSI_PINK;
+                    grid_str_append_color(&gridContent, GRID_BLOCK GRID_BLOCK, ANSI_PINK);
+                }
                 else
                 {
+                    ANSI_CODE = ANSI_GRAY;
                     char* frontColor = ANSI_CODE;
                     if (localRoadName != NULL && roadSeg->name != NULL && strcmp(
                             localRoadName, roadSeg->name) == 0)
@@ -650,7 +652,6 @@ void draw_grid()
                     grid_str_append_color(&gridContent, GRID_BLOCK GRID_BLOCK,
                                           roadSeg->id != localRoadId ? frontColor : ANSI_BLUE);
                 }
-                // str_append(&gridContent, GRID_BLOCK);
             }
             else
             {
@@ -934,13 +935,29 @@ void draw_console()
 
 void draw_current_state(RoadSegSlice roads, FireSlice fires, VegSlice vegetation)
 {
+    if (fires.len <= 0)
+    {
+        debug_log(ERROR, "Fires is empty!");
+        assert(fires.len > 0);
+    }
+    if (roads.len <= 0)
+    {
+        debug_log(ERROR, "Roads is empty!");
+        assert(roads.len > 0);
+    }
+    if (vegetation.len <= 0)
+    {
+        debug_log(ERROR, "Vegetation is empty!");
+        assert(vegetation.len > 0);
+    }
+
     current_roads = roads;
     current_fires = fires;
     current_vegetation = vegetation;
     draw_console();
 
-    LCoord lc = global_to_local(globalBounds.c2, globalBounds, scaled_vHeight(), scaled_vWidth());
-    GCoord gc = local_to_global(lc, globalBounds, scaled_vHeight(), scaled_vWidth());
+    // LCoord lc = global_to_local(globalBounds.c2, globalBounds, scaled_vHeight(), scaled_vWidth());
+    // GCoord gc = local_to_global(lc, globalBounds, scaled_vHeight(), scaled_vWidth());
     // write_to_textbox("lc: (%f, %f), gc: (%f, %f) -> gc: (%f, %f)", lc.x, lc.y, globalBounds.c2.lat,
     //                  globalBounds.c2.lon, gc.lat, gc.lon);
 }
@@ -1053,8 +1070,8 @@ void execute_command()
 
                 const GCoord c1 = GCoord_to_kilometer(globalBounds.c1);
                 const GCoord c2 = GCoord_to_kilometer(globalBounds.c2);
-                const double meterW = fabs(c1.lat - c2.lat) * 1000;
-                const double meterH = fabs(c1.lon - c2.lon) * 1000;
+                const double meterW = fabs(c1.lon - c2.lon) * 1000;
+                const double meterH = fabs(c1.lat - c2.lat) * 1000;
 
                 const LCoord prctDiff = {.x = (double)w / VIEWPORT_WIDTH,
                                          .y = (double)h / VIEWPORT_HEIGHT};
@@ -1120,20 +1137,18 @@ void execute_command()
                 {
                     double roadLength = GetRoadLength(*seg);
                     double closestFire = INFINITY;
-                    FireArea fire;
                     for (int i = 0; i < current_fires.len; i++)
                     {
                         double dst = GetFireDstToRoad(*seg, current_fires.items[i]);
                         if (dst < closestFire)
                         {
                             closestFire = dst;
-                            fire = current_fires.items[i];
                         }
                     }
                     char* riskMsg = "Low";
-                    if (seg->risk > 10)
+                    if (seg->risk > RISK_THRESHOLD_HIGH)
                         riskMsg = "High";
-                    else if (seg->risk > 5)
+                    else if (seg->risk > RISK_THRESHOLD_MEDIUM)
                         riskMsg = "Medium";
 
                     str_append(&infoText, "Road info:\n");
@@ -1142,7 +1157,10 @@ void execute_command()
                     str_appendf(&infoText, "├⮞ id:      %d\n", seg->id);
                     str_appendf(&infoText, "├⮞ risk:    %s (%d)\n", riskMsg, seg->risk);
                     str_appendf(&infoText, "├⮞ fire:    %lfm\n", closestFire);
-                    str_appendf(&infoText, "└⮞ length:  %lfm\n", roadLength);
+                    str_appendf(&infoText, "├⮞ speed:   %lfm/s\n", seg->speed_limit);
+                    str_appendf(&infoText, "├⮞ length:  %lfm\n", roadLength);
+                    str_appendf(&infoText, "├⮞ travel:  %lfs\n", roadLength / seg->speed_limit);
+                    str_appendf(&infoText, "└⮞ type:    %s/s\n", seg->material);
                 }
 
 
