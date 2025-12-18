@@ -131,7 +131,7 @@ int main()
 
     // Handcrafted FireArea struct
     FireArea fire_area = (FireArea){
-        .gcoord = (GCoord){.lat = 1, .lon = 1},
+        .gcoord = local_to_global((LCoord){.x = 1, .y = 1}, bbox, VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
         .lcoord = (LCoord){  .x = 1,   .y = 1},
         .temperature = 400,
         .weatherIndex = 0.41,
@@ -139,8 +139,8 @@ int main()
     };
 
     FireArea fire_area_2 = (FireArea){
-        .gcoord = (GCoord){.lat = 2, .lon = 2},
-        .lcoord = (LCoord){  .x = 2,   .y = 2},
+        .gcoord = local_to_global((LCoord){  .x = VIEWPORT_WIDTH / 2,   .y =  VIEWPORT_HEIGHT / 2}, bbox, VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
+        .lcoord = (LCoord){  .x = VIEWPORT_WIDTH / 2,   .y =  VIEWPORT_HEIGHT / 2},
         .temperature = 600,
         .weatherIndex = 0.75,
         .category = "WF"
@@ -187,10 +187,10 @@ int main()
             max_type = veg_slice.items[i].type;
     }
     debug_log(MESSAGE, "MAX VEGETATION TYPE AFTER PARSE: %d", max_type);
-    printf("DRAWING IMAGE\n");
-    debug_log(MESSAGE, "DRAWING IMAGE");
-    save_state_to_image("img_out.png", 512, roads, fire_slice, veg_slice);
-    debug_log(MESSAGE, "FINISHED IMAGE");
+    // printf("DRAWING IMAGE\n");
+    // debug_log(MESSAGE, "DRAWING IMAGE");
+    // save_state_to_image("img_out.png", 512, roads, fire_slice, veg_slice);
+    // debug_log(MESSAGE, "FINISHED IMAGE");
     // debug_log(MESSAGE, "DRAWING VEG-ONLY IMAGE");
     // save_veg_to_image("veg_img_out.png", 512, veg_slice, bbox);
     // debug_log(MESSAGE, "FINISHED VEG-ONLY IMAGE");

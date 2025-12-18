@@ -422,6 +422,37 @@ double get_point_dist_to_road(LCoord n1, LCoord n2, LCoord p, double tolerance)
     return numerator / denominator;
 }
 
+RoadSeg* get_road_seg_at(RoadSegSlice road_data, LCoord point, double tolerance)
+{
+    RoadSegSlice roads = road_data;
+
+    for (size_t i = 0; i < roads.len; i++)
+    {
+        NodeSlice nodes = roads.items[i].nodes;
+
+        for (size_t j = 0; j < nodes.len; j++)
+        {
+            if (j >= nodes.len - 1)
+                break;
+
+            RoadNode node1 = nodes.items[j];
+            LCoord node1LCoord = global_to_local(node1.coords, globalBounds, VIEWPORT_HEIGHT,
+                                                 VIEWPORT_WIDTH);
+            RoadNode node2 = nodes.items[j + 1];
+            LCoord node2LCoord = global_to_local(node2.coords, globalBounds, VIEWPORT_HEIGHT,
+                                                 VIEWPORT_WIDTH);
+
+
+            double dist = get_point_dist_to_road(node1LCoord, node2LCoord, point, tolerance);
+
+            if (dist >= -tolerance && dist <= tolerance)
+                return &roads.items[i];
+        }
+    }
+
+    return NULL;
+}
+
 bool road_has_road_at(RoadSegSlice road_data, LCoord point, double tolerance)
 {
     RoadSegSlice roads = road_data;
@@ -501,6 +532,17 @@ int get_road_risk(RoadSegSlice road_data, LCoord point, double tolerance)
     return -1;
 }
 
+void grid_str_append_color_background(String* str, const char* chs, char* color)
+{
+    static char* previousColor = "";
+    if (strcmp(color, previousColor) != 0)
+    {
+        previousColor = color;
+        str_append(str, color);
+    }
+    str_append(str, chs);
+}
+
 void grid_str_append_color(String* str, const char* chs, char* color)
 {
     static char* previousColor = "";
@@ -516,6 +558,9 @@ LCoord selectedCoord = (LCoord){.x = -1, .y = -1};
 
 void draw_grid()
 {
+    static size_t localRoadId = -1;
+    static char* localRoadName;
+    bool doubleDraw = false;
     fast_print(SAVE_CURSOR_STATE_ANSI);
     fast_print(HIDE_CURSOR_ANSI);
     String gridContent = str_from("");
@@ -541,11 +586,26 @@ void draw_grid()
             const double tolerance = 1.0;
             const LCoord lCoord = (LCoord){.x = (x / prctDiff.x), .y = (y / prctDiff.y)};
             const bool isRoad = road_has_road_at(current_roads, lCoord, tolerance);
+            const RoadSeg* roadSeg = get_road_seg_at(current_roads, lCoord, tolerance);
+            if (!isRoad)
+                grid_str_append_color(&gridContent, "", ANSI_NONE_BACKGROUND);
             const bool isFire = fire_has_fire_at(current_fires, lCoord, tolerance);
             if (round(lCoord.x - selectedCoord.x) == 0 && round(lCoord.y - selectedCoord.y) == 0)
             {
                 grid_str_append_color(&gridContent, GRID_BLOCK, ANSI_BLUE);
                 str_append(&gridContent, GRID_BLOCK);
+                const size_t compareId = localRoadId;
+                if (isRoad)
+                {
+                    localRoadId = roadSeg->id;
+                    localRoadName = roadSeg->name;
+                }
+                else
+                {
+                    localRoadId = -1;
+                    localRoadName = "";
+                }
+                doubleDraw = compareId != localRoadId;
             }
             else if (isFire)
             {
@@ -559,14 +619,38 @@ void draw_grid()
                 const int risk = get_road_risk(current_roads, lCoord, tolerance);
                 blueCount++;
 
-                if (risk > 1)
+                if (risk > 10)
+                    ANSI_CODE = ANSI_RED;
+                else if (risk > 5)
                     ANSI_CODE = ANSI_ORANGE;
                 else if (risk < 0)
                     ANSI_CODE = ANSI_PINK;
                 else
                     ANSI_CODE = ANSI_GRAY;
-                grid_str_append_color(&gridContent, GRID_BLOCK, ANSI_CODE);
-                str_append(&gridContent, GRID_BLOCK);
+
+                if (risk != 0)
+                {
+                    char* backColor = (localRoadName != NULL && roadSeg->name != NULL &&
+                                       strcmp(localRoadName, roadSeg->name) == 0)
+                                          ? ANSI_DARK_BLUE_BACKGROUND
+                                          : ANSI_GRAY_BACKGROUND;
+                    grid_str_append_color(&gridContent, "",
+                                          roadSeg->id != localRoadId
+                                              ? backColor
+                                              : ANSI_BLUE_BACKGROUND);
+                    grid_str_append_color(&gridContent, "！", ANSI_CODE);
+                    //Ｘ https://www.compart.com/en/unicode/block/U+FF00
+                }
+                else
+                {
+                    char* frontColor = ANSI_CODE;
+                    if (localRoadName != NULL && roadSeg->name != NULL && strcmp(
+                            localRoadName, roadSeg->name) == 0)
+                        frontColor = ANSI_DARK_BLUE;
+                    grid_str_append_color(&gridContent, GRID_BLOCK GRID_BLOCK,
+                                          roadSeg->id != localRoadId ? frontColor : ANSI_BLUE);
+                }
+                // str_append(&gridContent, GRID_BLOCK);
             }
             else
             {
@@ -574,7 +658,7 @@ void draw_grid()
                 VegType veg_type = VEG_NONE;
                 // GCoord gCoord = local_to_global(lCoord, globalBounds, vHeight, vWidth);
                 if (coord_has_vegetation(lCoord, &veg_type, current_vegetation, tolerance,
-                                         globalBounds, vWidth, vHeight))
+                                         globalBounds, VIEWPORT_WIDTH, VIEWPORT_HEIGHT))
                 {
                     switch (veg_type)
                     {
@@ -631,6 +715,8 @@ void draw_grid()
     // vHeight);
     str_free(&gridContent);
     printf(RESTORE_CURSOR_STATE_ANSI);
+    if (doubleDraw)
+        draw_grid();
 }
 
 void draw_text(char* text, int line, int column, int height, int width)
@@ -644,14 +730,23 @@ void draw_text(char* text, int line, int column, int height, int width)
     if (column > 1)
         sprintf(newline, "\033[1E\033[%dC", column - 1);
 
+    int textLength = 0;
     for (int i = 0; i < MIN(stringText.len, height * width); i++)
     {
-        str_push(&textBox, stringText.chars[i]);
-        const int currentLineWidth = i % width;
-        if (currentLineWidth == width - 1)
-        {
+        size_t currentLineWidth = textLength % width;
+        if (stringText.chars[i] == '\n')
+            while (currentLineWidth < width - 1)
+            {
+                str_push(&textBox, ' ');
+                textLength++;
+                currentLineWidth = textLength % width;
+            }
+        else
+            str_push(&textBox, stringText.chars[i]);
+        currentLineWidth = textLength % width;
+        if (currentLineWidth >= width - 1)
             str_append(&textBox, newline);
-        }
+        textLength++;
     }
     fast_print(textBox.chars);
     str_free(&textBox);
@@ -872,6 +967,7 @@ void prepend_console_command(void (*action), char* description)
     vec_unshift(&commands, cmd);
 }
 
+
 ///Start detecting user inputs (keyboard or mouse) from the user.
 void execute_command()
 {
@@ -952,24 +1048,104 @@ void execute_command()
             {
                 const int h = scaled_vHeight();
                 const int w = scaled_vWidth();
-                mouseY = MIN(mouseY, h) - 2;
+                mouseY = MIN(mouseY, h + 1) - 2;
                 mouseX = MIN(mouseX, w * 2) / 2 - 1;
+
+                const GCoord c1 = GCoord_to_kilometer(globalBounds.c1);
+                const GCoord c2 = GCoord_to_kilometer(globalBounds.c2);
+                const double meterW = fabs(c1.lat - c2.lat) * 1000;
+                const double meterH = fabs(c1.lon - c2.lon) * 1000;
+
                 const LCoord prctDiff = {.x = (double)w / VIEWPORT_WIDTH,
                                          .y = (double)h / VIEWPORT_HEIGHT};
                 const LCoord lCoord = (LCoord){.x = ((double)mouseX / prctDiff.x),
                                                .y = ((double)mouseY / prctDiff.y)};
+                // (GCoord){.lat = meterW * ((lCoord.x + 1) / VIEWPORT_WIDTH), .lon = meterH * ((lCoord.y + 1) / VIEWPORT_HEIGHT) };
+                const GCoord globalCoord = local_to_global(lCoord, globalBounds, h, w);
                 selectedCoord = lCoord;
-                const int roadRisk = get_road_risk(current_roads, lCoord, 1);
                 String infoText = str_from("");
-                if (roadRisk >= 0)
+                //https://www.w3schools.com/charsets/ref_utf_arrows.asp
+                //https://www.w3schools.com/charsets/ref_utf_box.asp
+
+
+                str_appendf(&infoText, "Map bounds: (%dm x %dm) (%dm, %dm)\n", (int)meterW,
+                            (int)meterH, (int)(meterW / VIEWPORT_WIDTH),
+                            (int)(meterH / VIEWPORT_HEIGHT));
+                str_appendf(&infoText, "Coordinates: \n├⮞ lat: %lf\n└⮞ lon: %lf\n",
+                            globalCoord.lat, globalCoord.lon);
+
+                VegType veg_type = VEG_NONE;
+                char* vegTypeName = "UNKNOWN";
+                if (coord_has_vegetation(lCoord, &veg_type, current_vegetation, 1, globalBounds,
+                                         VIEWPORT_WIDTH, VIEWPORT_HEIGHT))
                 {
-                    char* riskMsg = "Safe";
-                    if (roadRisk == 1)
-                        riskMsg = "Low";
-                    else if (roadRisk > 1)
-                        riskMsg = "High";
-                    str_appendf(&infoText, "Road risk: %s", riskMsg);
+                    switch (veg_type)
+                    {
+                        case VEG_NONE:
+                            vegTypeName = "NONE";
+                            break;
+                        case VEG_ROCK:
+                            vegTypeName = "ROCK";
+                            break;
+                        case VEG_SAND:
+                            vegTypeName = "SAND";
+                            break;
+                        case VEG_BUILDINGS:
+                            vegTypeName = "BUILDINGS";
+                            break;
+                        case VEG_WATER:
+                            vegTypeName = "WATER";
+                            break;
+                        case VEG_WETLAND:
+                            vegTypeName = "WETLAND";
+                            break;
+                        case VEG_FARMLAND:
+                            vegTypeName = "FARMLAND";
+                            break;
+                        case VEG_GRASS:
+                            vegTypeName = "GRASS";
+                            break;
+                        case VEG_SHRUBLAND:
+                            vegTypeName = "SHRUBLAND";
+                            break;
+                        case VEG_FOREST:
+                            vegTypeName = "FOREST";
+                            break;
+                    }
                 }
+                str_appendf(&infoText, "Vegetation type: %s\n", vegTypeName);
+
+                RoadSeg* seg = get_road_seg_at(current_roads, lCoord, 1);
+                if (seg != NULL)
+                {
+                    double roadLength = GetRoadLength(*seg);
+                    double closestFire = INFINITY;
+                    FireArea fire;
+                    for (int i = 0; i < current_fires.len; i++)
+                    {
+                        double dst = GetFireDstToRoad(*seg, current_fires.items[i]);
+                        if (dst < closestFire)
+                        {
+                            closestFire = dst;
+                            fire = current_fires.items[i];
+                        }
+                    }
+                    char* riskMsg = "Low";
+                    if (seg->risk > 10)
+                        riskMsg = "High";
+                    else if (seg->risk > 5)
+                        riskMsg = "Medium";
+
+                    str_append(&infoText, "Road info:\n");
+                    if (seg->name != NULL)
+                        str_appendf(&infoText, "├⮞ name:    %s\n", seg->name);
+                    str_appendf(&infoText, "├⮞ id:      %d\n", seg->id);
+                    str_appendf(&infoText, "├⮞ risk:    %s (%d)\n", riskMsg, seg->risk);
+                    str_appendf(&infoText, "├⮞ fire:    %lfm\n", closestFire);
+                    str_appendf(&infoText, "└⮞ length:  %lfm\n", roadLength);
+                }
+
+
                 write_to_textbox(infoText.chars);
                 str_free(&infoText);
                 //fast_print_args("that's inside the grid! (x: %d, y: %d)", mouseX, mouseY);
@@ -1055,7 +1231,8 @@ void save_state_to_image(const char* path, size_t size, RoadSegSlice roads, Fire
     int blueCount = 0;
     VegType max_veg_type = VEG_NONE;
     VegType min_veg_type = VEG_FOREST;
-    const LCoord prctDiff = {.x = (double)size / vWidth, .y = (double)size / vHeight};
+    const LCoord prctDiff = {.x = (double)size / VIEWPORT_WIDTH,
+                             .y = (double)size / VIEWPORT_HEIGHT};
     for (int y = 0; y < size; y++)
     {
         for (int x = 0; x < size; x++)
@@ -1083,9 +1260,8 @@ void save_state_to_image(const char* path, size_t size, RoadSegSlice roads, Fire
             else
             {
                 VegType veg_type;
-                // GCoord gCoord = local_to_global(lCoord, globalBounds, vHeight, vWidth);
                 if (coord_has_vegetation(lCoord, &veg_type, current_vegetation, tolerance,
-                                         globalBounds, vWidth, vHeight))
+                                         globalBounds, VIEWPORT_WIDTH, VIEWPORT_HEIGHT))
                 {
                     // debug_log(MESSAGE, "\t\tFOUND VT: {tag: %d}");
                     max_veg_type = MAX(max_veg_type, veg_type);

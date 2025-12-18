@@ -2,6 +2,7 @@
 
 #include "../models/road.h"
 
+#include <math.h>
 #include <stdlib.h>
 
 static const double wildfireRiskMultiplier = 2;
@@ -36,23 +37,40 @@ void assess_roads(RoadSegSlice* roads, FireSlice fires)
 RoadRisk assess_road(RoadSeg* road, FireVec* fires)
 {
     double risk = 0;
+    double avgCarSpeed = 13.9;
+    double avgFireSpeed = 6.14;
 
+    double roadLength = GetRoadLength(*road);
     for (int i = 0; i < fires->len; i++)
     {
         double localRisk = 0;
 
         FireArea fire = fires->items[i];
 
-        // TEMPORARY RISK CALCULATION LOGIC
-        localRisk = fire.temperature / 100.0 * fire.weatherIndex;
-        localRisk *= GetFireDstToRoad(*road, fire) / 10.0;
-
-        if (strcmp(fire.category, "WF") == 0)
+        double dst = GetFireDstToRoad(*road, fire);
+        if (dst == INFINITY)
         {
-            localRisk *= wildfireRiskMultiplier;
+            debug_log(ERROR, "GetFireDstToRoad: Length is infinite!");
+            assert(dst == INFINITY);
         }
+        double fireEta = dst / avgFireSpeed;
+        double carEta = roadLength / avgCarSpeed;
+        double firstToReachModifier = carEta / MAX(1, fireEta);
+        debug_log(MESSAGE, "firstToReachModifier: %lf", firstToReachModifier);
+        debug_log(MESSAGE, "FireEta: %lf, CarEta: %lf", fireEta, carEta);
+        risk += firstToReachModifier;
 
-        risk += localRisk;
+
+        // TEMPORARY RISK CALCULATION LOGIC
+        // localRisk = fire.temperature / 100.0 * fire.weatherIndex;
+        // localRisk *= dst / 10.0;
+        //
+        // if (strcmp(fire.category, "WF") == 0)
+        // {
+        //     localRisk *= wildfireRiskMultiplier;
+        // }
+
+        // risk += localRisk;
     }
 
     road->risk = (RoadRisk)risk;
