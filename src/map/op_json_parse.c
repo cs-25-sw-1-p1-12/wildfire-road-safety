@@ -142,7 +142,7 @@ bool road_json_parse(char* input, RoadSegSlice* road_data)
             .nodes = vec_owned_slice(inner_nodes),
             .risk = 0,
             .risk_reason = 0,
-            .speed_limit = speed_limit,
+            .speed_limit = speed_limit == 0 ? 4.166667 : speed_limit,
             .name = str_owned_slice(name).chars,
             .material = str_owned_slice(material).chars,
         };

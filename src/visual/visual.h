@@ -16,6 +16,9 @@
 #define CONSOLE_TARGET_HEIGHT 63
 #define CONSOLE_TARGET_WIDTH 237
 
+#define RISK_THRESHOLD_MEDIUM 1
+#define RISK_THRESHOLD_HIGH 10
+
 // Escape codes
 #define ENABLE_MOUSE_INPUT_ANSI "\e[?1000;1006;1015h"
 #define DISABLE_MOUSE_INPUT_ANSI "\e[?1000;1006;1015l"
@@ -64,6 +67,8 @@ typedef struct
     char* bottomRight;
 } OutlineCorners;
 
+extern BoundBox globalBounds;
+
 
 void save_state_to_image(const char* path, size_t size, RoadSegSlice roads, FireSlice fires,
                          VegSlice vegetation);
@@ -91,6 +96,7 @@ void close_console();
 void execute_command();
 
 void set_bounding_box(BoundBox box);
+
 
 /// Clears the console of all characters
 void clear();

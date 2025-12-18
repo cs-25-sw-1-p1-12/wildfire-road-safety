@@ -53,5 +53,6 @@ void assign_roads(int number_of_roads, RoadSeg road, FireArea fire);
 GCoord GCoord_to_kilometer(GCoord gCoord);
 double haversine(GCoord c1, GCoord c2);
 GCoord closest_point_on_segment(GCoord a, GCoord b, GCoord p);
+RoadNode* get_closest_road_node(RoadSeg road, GCoord p);
 
 #endif // ROAD_DATA_H
