@@ -58,10 +58,11 @@ void json_token_free(JsonToken tok);
         assert(got.tag == expect && "Encountered unexpected token"); \
     }
 
-#define expect_token_and_free(got, expect)                           \
-    {                                                                \
-        assert(got.tag == expect && "Encountered unexpected token"); \
-        json_token_free(got);                                        \
+#define expect_token_and_free(got, expect)                                     \
+    {                                                                          \
+        JsonToken __got_token = (got);                                         \
+        assert(__got_token.tag == (expect) && "Encountered unexpected token"); \
+        json_token_free(__got_token);                                          \
     }
 
 

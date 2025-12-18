@@ -2,6 +2,7 @@
 
 #include "../caching/cache.h"
 #include "../models/geo.h"
+#include "fire_json_parse.h"
 #include "op_json_parse.h"
 #include "web.h"
 
@@ -92,7 +93,11 @@ bool get_fire_areas(GCoord coord, FireSlice* fire_buf)
     if (!set_cache_data(CACHE_FIRE, data_buf))
         debug_log(WARNING, "Failed to write fire cache data");
 
-    printf("Received following from API call:\n%s\n", data_buf.chars);
+    if (!fire_json_parse(data_buf.chars, fire_buf))
+    {
+        printf("Failed parse JSON response\n");
+        return false;
+    }
 
     str_free(&data_buf);
 

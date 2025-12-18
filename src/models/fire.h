@@ -9,7 +9,7 @@ typedef struct
     GCoord gcoord;
     LCoord lcoord;
     double temperature;
-    double weatherIndex;
+    double frp;
     char* category;
 } FireArea;
 
