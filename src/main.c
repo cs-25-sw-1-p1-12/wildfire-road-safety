@@ -50,32 +50,32 @@ void stop_program()
     programIsRunning = false;
 }
 
-// void signal_handler(int signalNum)
-// {
-//     switch (signalNum)
-//     {
-//         case SIGSEGV:
-//             debug_log(ERROR, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
-//             fprintf(stderr, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
-//             exit(EXIT_FAILURE);
-//             break;
-//         case SIGFPE:
-//             debug_log(ERROR, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
-//             fprintf(stderr, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
-//             exit(EXIT_FAILURE);
-//             break;
-//         default:
-//             debug_log(ERROR, "COULD NOT RECOGNISE SIGNAL");
-//             fprintf(stderr, "COULD NOT RECOGNISE SIGNAL");
-//             break;
-//     }
-// }
+void signal_handler(int signalNum)
+{
+    switch (signalNum)
+    {
+        case SIGSEGV:
+            debug_log(ERROR, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
+            fprintf(stderr, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
+            exit(EXIT_FAILURE);
+            break;
+        case SIGFPE:
+            debug_log(ERROR, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
+            fprintf(stderr, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
+            exit(EXIT_FAILURE);
+            break;
+        default:
+            debug_log(ERROR, "COULD NOT RECOGNISE SIGNAL");
+            fprintf(stderr, "COULD NOT RECOGNISE SIGNAL");
+            break;
+    }
+}
 
 
 int main()
 {
-    // signal(SIGSEGV, signal_handler);
-    // signal(SIGFPE, signal_handler);
+    signal(SIGSEGV, signal_handler);
+    signal(SIGFPE, signal_handler);
     init_console();
 
     // Bbox for area around Cassiopeia
