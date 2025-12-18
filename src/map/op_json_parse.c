@@ -9,7 +9,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#define KMH_TO_MS 0.2777778
+#define MPH_TO_MS 0.44704
 
 typedef VecDef(size_t) IdxVec;
 typedef SliceDef(size_t) IdxSlice;
@@ -102,6 +106,7 @@ bool road_json_parse(char* input, RoadSegSlice* road_data)
         // ti = tag index
         String material = {0};
         String name = {0};
+        double speed_limit = 0;
         for (size_t ti = 0; ti < op_way.tags.len; ti++)
         {
             OpTag tag = op_way.tags.items[ti];
@@ -110,15 +115,36 @@ bool road_json_parse(char* input, RoadSegSlice* road_data)
 
             if (strcmp(tag.key, "name") == 0)
                 str_append(&name, tag.val);
+
+            if (strcmp(tag.key, "maxspeed") == 0)
+            {
+                if (strcmp(tag.val, "none") == 0)
+                    continue;
+
+                else if (strcmp(tag.val, "walk") == 0)
+                {
+                    speed_limit = 4.166667;
+                    continue;
+                }
+
+                char* endptr = NULL;
+                double limit = strtod(tag.val, &endptr);
+                if (*endptr == '\0')
+                    speed_limit = limit * KMH_TO_MS;
+
+                else if (*endptr == ' ' && strcmp(endptr + 1, "mph"))
+                    speed_limit = limit * MPH_TO_MS;
+            }
         }
 
         RoadSeg road = {
             .id = op_way.id,
             .nodes = vec_owned_slice(inner_nodes),
-            .material = str_owned_slice(material).chars,
-            .name = str_owned_slice(name).chars,
             .risk = 0,
             .risk_reason = 0,
+            .speed_limit = speed_limit,
+            .name = str_owned_slice(name).chars,
+            .material = str_owned_slice(material).chars,
         };
 
         vec_free(inner_nodes);
