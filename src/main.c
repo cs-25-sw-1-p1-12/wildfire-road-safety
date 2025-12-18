@@ -124,48 +124,19 @@ int main()
         coordsRead++;
     }
 
-
-
     RoadSegSlice roads = {0};
     if (!get_road_segments(bbox, &roads))
         return 1;
 
     printf("FOUND %zu ROADS\n", roads.len);
 
+
     FireSlice fire_slice = {0};
+    if (!get_fire_areas(bbox.c1, &fire_slice))
+        return 1;
 
-    get_fire_areas(bbox.c1,
-                   &fire_slice); // Rewrite JSON parser to create a FireSlice from this
+    assess_roads(&roads, fire_slice);
 
-
-    //
-    // Temporary testing of assess_roads function
-    //
-    FireSlice tempFires = slice_with_len(FireSlice, 2);
-
-    // Handcrafted FireArea struct, to be replaced by the return of get_fire_areas above
-    FireArea fire_area = (FireArea){
-        .gcoord = (GCoord){.lat = 1, .lon = 1},
-        .lcoord = (LCoord){  .x = 1,   .y = 1},
-        .temperature = 400,
-        .weatherIndex = 0.41,
-        .category = "WF"
-    };
-
-    FireArea fire_area_2 = (FireArea){
-        .gcoord = (GCoord){.lat = 2, .lon = 2},
-        .lcoord = (LCoord){  .x = 2,   .y = 2},
-        .temperature = 600,
-        .weatherIndex = 0.75,
-        .category = "WF"
-    };
-
-    tempFires.items[0] = fire_area;
-    tempFires.items[1] = fire_area_2;
-
-    assess_roads(&roads, tempFires);
-
-    slice_free(&tempFires);
 
     VegSlice veg_slice = {0};
 

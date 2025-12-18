@@ -39,7 +39,7 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires)
         FireArea fire = fires->items[i];
 
         // TEMPORARY RISK CALCULATION LOGIC
-        localRisk = fire.temperature / 100.0 * fire.weatherIndex;
+        localRisk = fire.temperature / 100.0 * fire.frp;
         localRisk *= GetFireDstToRoad(*road, fire) / 10.0;
 
         if (strcmp(fire.category, "WF") == 0)
