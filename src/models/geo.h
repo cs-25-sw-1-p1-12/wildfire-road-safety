@@ -13,12 +13,14 @@ typedef struct
 
 typedef struct
 {
-    size_t x;
-    size_t y;
+    double x;
+    double y;
 } LCoord;
 
 /// A polygon, consisting of a list of global coordintes as its vertices
 typedef VecDef(GCoord) GPoly;
+
+typedef VecDef(LCoord) LPoly;
 
 typedef struct
 {
@@ -33,6 +35,7 @@ typedef struct
 } BoundBox;
 
 LCoord global_to_local(GCoord gcoord, BoundBox bbox, size_t height, size_t width);
+GCoord local_to_global(LCoord lcoord, BoundBox bbox, size_t height, size_t width);
 
 /// Get a bbox around a global coordinate.
 /// The global coordinate will be the center of the bbox.
