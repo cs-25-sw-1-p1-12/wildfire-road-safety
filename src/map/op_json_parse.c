@@ -142,7 +142,7 @@ bool road_json_parse(char* input, RoadSegSlice* road_data)
             .nodes = vec_owned_slice(inner_nodes),
             .risk = 0,
             .risk_reason = 0,
-            .speed_limit = speed_limit,
+            .speed_limit = speed_limit == 0 ? 4.166667 : speed_limit,
             .name = str_owned_slice(name).chars,
             .material = str_owned_slice(material).chars,
         };
@@ -283,6 +283,37 @@ bool vegetation_json_parse(char* input, VegSlice* veg_data)
             }
         }
 
+        if (vertices.len >= 2)
+        {
+            double dir_sum = 0;
+
+            for (size_t i = 0; i < vertices.len; i++)
+            {
+                if (i >= vertices.len - 1)
+                    break;
+
+                GCoord n1 = vertices.items[i];
+                GCoord n2 = vertices.items[i + 1];
+
+                dir_sum += (n2.lon - n1.lon) * (n2.lat + n2.lat);
+            }
+
+            if (dir_sum >= 0)
+            {
+                GCoord* coords = vec_clone_items(vertices);
+                size_t len = vertices.len;
+
+                vec_empty(&vertices);
+                // Reverse the list
+                for (size_t i = len - 1; i > 0; i--)
+                {
+                    vec_push(&vertices, coords[i]);
+                }
+
+                free(coords);
+            }
+        }
+
         VegData data = {
             .id = op_way.id,
             .type = veg_type,
@@ -359,7 +390,7 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
 
             tok = json_lexer_next(&lex);
             expect_token(tok, JSON_NUMBER_VAL);
-            size_t id = (size_t)lround(tok.number_val);
+            size_t id = (size_t)llround(tok.number_val);
             json_token_free(tok);
 
             // LAT
@@ -418,7 +449,7 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
 
             tok = json_lexer_next(&lex);
             expect_token(tok, JSON_NUMBER_VAL);
-            size_t id = (size_t)lround(tok.number_val);
+            size_t id = (size_t)llround(tok.number_val);
             json_token_free(tok);
 
             // NODES
@@ -426,26 +457,38 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
             expect_token(tok, JSON_KEY);
             assert(strcmp(tok.key, "nodes") == 0 && "Expected \"nodes\" key in json-object");
             json_token_free(tok);
+
             expect_token_and_free(json_lexer_next(&lex), JSON_OPEN_LIST);
 
             IdxVec inner_nodes = {0};
-            while (tok.tag != JSON_CLOSE_LIST)
+            while (true)
             {
                 tok = json_lexer_next(&lex);
                 if (tok.tag == JSON_CLOSE_LIST)
+                {
+                    json_token_free(tok);
                     break;
+                }
 
                 expect_token(tok, JSON_NUMBER_VAL);
 
                 size_t idx;
-                if (!find_node(&nodes, tok.number_val, &idx))
+                size_t node_id = (size_t)llround(tok.number_val);
+                if (!find_node(&nodes, node_id, &idx))
                 {
-                    tok = json_lexer_next(&lex); // Skip the , or reach ]
+                    debug_log(ERROR, "Failed to find node with id: %0.lf", tok.number_val);
+                    // json_token_free(tok);
+                    // expect_token_and_free(json_lexer_next(&lex),
+                    //                       JSON_ITEM_DELIM); // Skip the , or reach ]
+                    json_token_free(tok);
                     continue;
                 }
 
                 vec_push(&inner_nodes, idx);
+                json_token_free(tok);
             }
+
+
 
             OpTagVec tags = {0};
             JsonToken peeked = json_lexer_peek(lex);
@@ -459,6 +502,8 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
                 }
             }
             json_token_free(peeked);
+
+            debug_log(MESSAGE, "WAY %zu: { nodes: %zu, tags: %zu }", id, inner_nodes.len, tags.len);
 
             OpWay way = {
                 .id = id,
@@ -486,6 +531,8 @@ bool generic_json_parse(char* input, OpNodeSlice* node_buf, OpWaySlice* way_buf)
 
     *way_buf = (OpWaySlice)vec_owned_slice(ways);
     *node_buf = (OpNodeSlice)vec_owned_slice(nodes);
+
+    debug_log(MESSAGE, "PARSED %zu WAYS WITH %zu NODES", ways.len, nodes.len);
 
     vec_free(ways);
     vec_free(nodes);

@@ -1,6 +1,7 @@
 #include "risk.h"
 
 #include "../models/road.h"
+#include "../visual/visual.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -25,10 +26,11 @@ void assess_roads(RoadSegSlice* roads, FireSlice* fires, VegSlice* vegetation)
             vec_push(&nearbyFires, fires->items[fi]);
         }
 
-        RoadRisk risk = assess_road(&road, &nearbyFires, vegetation);
-        printf("Road with id '%lu' rated with a risk value of %d\n", road.id, risk);
-
+        assess_road(&road, &nearbyFires, vegetation);
+        // printf("Road with id '%zu' rated with a risk value of %d\n", road.id, road.risk);
+        debug_log(MESSAGE, "Road with id '%llu' rated with a risk value of %d", road.id, road.risk);
         vec_free(nearbyFires);
+        roads->items[i] = road;
     }
 }
 
@@ -36,20 +38,33 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires, VegSlice* vegetation)
 {
     double totalImpactScore = 0;
 
+    double roadLength = GetRoadLength(*road);
     for (int i = 0; i < fires->len; i++)
     {
         // Get the fire area at index i
         FireArea fire = fires->items[i];
 
-        double distanceToFire = GetFireDstToRoad(*road, fire);
+        const double dst = GetFireDstToRoad(*road, fire);
+        if (dst == INFINITY)
+        {
+            debug_log(ERROR, "GetFireDstToRoad: Length is infinite!");
+            assert(dst == INFINITY);
+        }
+        const double fireEta = dst / avgFireSpeed;
+        const double carEta = roadLength / avgCarSpeed;
+        const double firstToReachModifier = carEta / MAX(1, fireEta);
+        // debug_log(MESSAGE, "firstToReachModifier: %lf", firstToReachModifier);
+        // debug_log(MESSAGE, "FireEta: %lf, CarEta: %lf", fireEta, carEta);
+        localRisk += firstToReachModifier;
+
         double vegetationImpactScore = calc_vegetation_impact_score(vegetation);
 
 
         // Calculate a hazard score
-        double hazardScore = fire.frp * pow(-distanceToFire, decayConstant) * vegetationImpactScore;
+        double hazardScore = fire.frp * pow(-dst, decayConstant) * vegetationImpactScore;
 
         // Calculate an exposure score
-        double exposureScore = 1 / (1 + distanceToFire);
+        double exposureScore = 1 / (1 + dst);
 
         // Multiply hazard and exposure score
         double impactScore = hazardScore * exposureScore;
@@ -74,50 +89,22 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires, VegSlice* vegetation)
 }
 
 double calc_vegetation_impact_score(VegSlice* vegetation) {
-    // Calculate vegetation impact score
-    // THIS SHOULD INCLUDE THE DISTANCE TO THE VEGETATION & SIZE OF VEGETATION AREA
-    double vegetationImpactScore = 0;
-
-    for (int vi = 0; vi < vegetation->len; vi++)
-    {
-        VegData veg = vegetation->items[vi];
-
-        switch (veg.type)
+        VegType veg_type = VEG_NONE;
+        //Fire vegetation multiplier
+        LCoord lCoord = global_to_local(fire.gcoord, globalBounds, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+        if (coord_has_vegetation(lCoord, &veg_type, vegetation, 1, globalBounds, VIEWPORT_WIDTH,
+                                 VIEWPORT_HEIGHT))
         {
-            case VEG_GRASS: // MEDIUM RISK
-                break;
-            case VEG_FARMLAND: // MEDIUM/HIGH RISK
-                vegetationImpactScore += 100;
-                break;
-            case VEG_FOREST: // HIGH RISK
-                vegetationImpactScore += 150;
-                break;
-            case VEG_SHRUBLAND: // HIGH RISK
-                vegetationImpactScore += 180;
-                break;
-            case VEG_SAND: // HIGH OR LOW RISK
-                vegetationImpactScore -= 50;
-                break;
-            case VEG_ROCK: // LOW RISK
-                vegetationImpactScore -= 75;
-                break;
-            case VEG_WETLAND: // LOW RISK
-                vegetationImpactScore -= 70;
-                break;
-            case VEG_WATER: // LESSENS RISK
-                vegetationImpactScore -= 100;
-                break;
-            case VEG_BUILDINGS: // SPECIAL CASE, HAS POTENTIAL TO HARM PEOPLE
-                vegetationImpactScore += 200;
-                break;
-            case VEG_NONE:
-                break;
+            localRisk *= vegetation_risk_multiplier(veg_type);
         }
-    }
-
-    vegetationImpactScore = vegetationImpactScore / vegetation->len / 100;
-    if (vegetationImpactScore < 1 && vegetationImpactScore > 0)
-        vegetationImpactScore += 1;
-
-    return vegetationImpactScore;
+        //Road vegetation multiplier
+        lCoord = global_to_local(get_closest_road_node(*road, fire.gcoord)->coords, globalBounds,
+                                 VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+        veg_type = VEG_NONE;
+        if (coord_has_vegetation(lCoord, &veg_type, vegetation, 1, globalBounds, VIEWPORT_WIDTH,
+                                 VIEWPORT_HEIGHT))
+        {
+            localRisk *= vegetation_risk_multiplier(veg_type);
+        }
+        risk += localRisk;
 }

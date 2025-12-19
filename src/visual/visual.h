@@ -2,8 +2,102 @@
 #define VISUAL_H
 
 #include "../models/fire.h"
+#include "../models/geo.h"
 #include "../models/road.h"
+#include "../models/vegetation.h"
 
-void draw_current_state(RoadSegSlice roads, FireSlice fires);
+#define VIEWPORT_HEIGHT 50
+#define VIEWPORT_WIDTH 50
+#define TEXTBOX_WIDTH 65
+#define TEXTBOX_HEIGHT 30
+#define TEXTBOX_OFFSET_X 15
+#define TEXTBOX_OFFSET_Y 5
 
+#define CONSOLE_TARGET_HEIGHT 63
+#define CONSOLE_TARGET_WIDTH 237
+
+#define RISK_THRESHOLD_MEDIUM 1
+#define RISK_THRESHOLD_HIGH 10
+
+// Escape codes
+#define ENABLE_MOUSE_INPUT_ANSI "\e[?1000;1006;1015h"
+#define DISABLE_MOUSE_INPUT_ANSI "\e[?1000;1006;1015l"
+
+#define ENABLE_ALTERNATIVE_BUFFER_ANSI "\033[?1049h"
+#define DISABLE_ALTERNATIVE_BUFFER_ANSI "\033[?1049l"
+
+#define SAVE_CURSOR_STATE_ANSI "\e[s"
+#define RESTORE_CURSOR_STATE_ANSI "\e[u"
+
+#define MOVE_CURSOR_HOME_ANSI "\e[H"
+
+#define HIDE_CURSOR_ANSI "\e[?25l"
+#define SHOW_CURSOR_ANSI "\e[?25h"
+
+#define ERASE_FROM_CURSOR_TO_BOTTOM "\e[0J"
+
+
+#define ANSI_GREEN "\033[38;5;28m"
+#define ANSI_GREEN_LIGHT "\033[38;5;76m"
+#define ANSI_GRAY "\033[38;5;238m"
+#define ANSI_GRAY_LIGHT "\033[38;5;242m"
+#define ANSI_ORANGE "\033[38;5;202m"
+#define ANSI_PINK "\033[38;5;201m"
+#define ANSI_RED "\033[38;5;196m"
+#define ANSI_SAND "\033[38;5;228m"
+#define ANSI_WHITE "\033[38;5;255m"
+#define ANSI_YELLOW "\033[38;5;226m"
+#define ANSI_BLUE "\033[38;5;21m"
+#define ANSI_DARK_BLUE "\033[38;5;17m"
+
+
+#define ANSI_NONE_BACKGROUND "\033[48;5;0m"
+#define ANSI_GRAY_BACKGROUND "\033[48;5;238m"
+#define ANSI_ORANGE_BACKGROUND "\033[48;5;202m"
+#define ANSI_RED_BACKGROUND "\033[48;5;196m"
+#define ANSI_BLUE_BACKGROUND "\033[48;5;26m"
+#define ANSI_DARK_BLUE_BACKGROUND "\033[48;5;17m"
+
+
+typedef struct
+{
+    char* topLeft;
+    char* topRight;
+    char* bottomLeft;
+    char* bottomRight;
+} OutlineCorners;
+
+extern BoundBox globalBounds;
+
+
+void save_state_to_image(const char* path, size_t size, RoadSegSlice roads, FireSlice fires,
+                         VegSlice vegetation);
+
+void save_veg_to_image(const char* path, size_t size, VegSlice vegetation, BoundBox bbox);
+
+void draw_current_state(RoadSegSlice roads, FireSlice fires, VegSlice vegetation);
+/// Refreshes the console, and redraws everything
+void draw_console();
+/// This changes the content of the textbox that is displayed besides the gridmap
+void write_to_textbox(const char*, ...);
+
+/// Adds a function to a list of functions, the user can execute with an index input, into the
+/// console, the description is what is displayed in the text
+void prepend_console_command(void* action, char* description);
+
+/// configure the console to accept ANSI codes if it's windows based machine (does nothing if it's
+/// other types of OS)
+void init_console();
+/// Resets any changes the console could have potentially experienced
+void close_console();
+
+/// This will execute on of the commands added with append_console_command depending on input,
+/// this runs on a separate thread so scan doesn't block the program.
+void execute_command();
+
+void set_bounding_box(BoundBox box);
+
+
+/// Clears the console of all characters
+void clear();
 #endif

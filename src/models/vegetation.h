@@ -29,8 +29,10 @@ typedef struct
 
 typedef SliceDef(VegData) VegSlice;
 
-bool is_coord_in_area(GCoord coord, GPoly area, double tolerance);
 
-bool coord_has_vegetation(GCoord coord, VegType* type, VegSlice* data, double tolerance);
+bool is_coord_in_area(LCoord coord, LPoly area, double tolerance);
+
+bool coord_has_vegetation(LCoord coord, VegType* type, VegSlice data, double tolerance,
+                          BoundBox gbbox, size_t width, size_t height);
 
 #endif // VEGETATION_H
