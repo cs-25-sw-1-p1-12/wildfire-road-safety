@@ -295,7 +295,7 @@ bool vegetation_json_parse(char* input, VegSlice* veg_data)
                 GCoord n1 = vertices.items[i];
                 GCoord n2 = vertices.items[i + 1];
 
-                dir_sum += (n2.lon - n1.lon) * (n2.lat + n2.lat);
+                dir_sum += (n2.lon - n1.lon) * (n2.lat + n1.lat);
             }
 
             if (dir_sum >= 0)
