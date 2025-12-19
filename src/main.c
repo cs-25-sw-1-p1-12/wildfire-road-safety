@@ -136,8 +136,6 @@ int main()
 
     printf("FOUND %lu FIRES\n", fire_slice.len);
 
-    assess_roads(&roads, fire_slice);
-
 
     VegSlice veg_slice = {0};
 
@@ -153,6 +151,14 @@ int main()
         return 1;
 
     printf("FOUND VEGTYPE OF {tag: %d}\n", veg_type);
+
+
+
+    assess_roads(&roads, &fire_slice, &veg_slice);
+
+    slice_free(&roads);
+    slice_free(&fire_slice);
+    slice_free(&veg_slice);
 
     return 0;
 }
