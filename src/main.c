@@ -76,18 +76,21 @@ int main()
 {
     signal(SIGSEGV, signal_handler);
     signal(SIGFPE, signal_handler);
-    
+
     //
     // Input handling
     //
-    printf("To create a risk assessment, you will need to provide coordinates to form a square bounding box.\n");
-    printf("(A bounding box is made up of two coordinates, the top left corner of the box and the bottom right)\n\n");
+    printf(
+        "To create a risk assessment, you will need to provide coordinates to form a square bounding box.\n");
+    printf(
+        "(A bounding box is made up of two coordinates, the top left corner of the box and the bottom right)\n\n");
     printf("If you wish to test the application, enter -1000 below to use a predefined area.\n");
     printf("To start, please provide the latitude of the first coordinate: ");
 
     BoundBox bbox = {};
     double inputVal = 0;
     int coordsRead = 0;
+    bool isTestRun = false;
 
     while (coordsRead < 4)
     {
@@ -96,15 +99,17 @@ int main()
         // Used for testing, sets the bounding box to around Cassiopeia
         if (inputVal == -1000)
         {
+            isTestRun = true;
             bbox = (BoundBox){
                 .c1 = {.lat = 57.008437507228265, .lon = 9.98708721386485},
-                .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
+                .c2 = {.lat = 57.01467041792688, .lon = 9.99681826817088}
             };
 
-            printf("Using coordinates for bounding box around Cassiopeia (~11cm precision):\ncoordinate 1: %.6f, %.6f\ncoordinate 2: %.6f, %.6f\n", 
-                bbox.c1.lat, 
-                bbox.c1.lon, 
-                bbox.c2.lat, 
+            printf(
+                "Using coordinates for bounding box around Cassiopeia (~11cm precision):\ncoordinate 1: %.6f, %.6f\ncoordinate 2: %.6f, %.6f\n",
+                bbox.c1.lat,
+                bbox.c1.lon,
+                bbox.c2.lat,
                 bbox.c2.lon);
 
             coordsRead = 4;
@@ -120,14 +125,16 @@ int main()
         // Ensure the input is valid for latitude
         if ((inputVal > 90 || inputVal < -90) && (coordsRead == 0 || coordsRead == 2))
         {
-            printf("Input error: Latitude can only be between 90 and -90.\nPlease try a different value: ");
+            printf(
+                "Input error: Latitude can only be between 90 and -90.\nPlease try a different value: ");
             continue;
         }
 
         // Ensure the input is valid for longitude
         if ((inputVal > 180 || inputVal < -180) && (coordsRead == 1 || coordsRead == 3))
         {
-            printf("Input error: Longitude can only be between 180 and -180\nPlease try a different value: ");
+            printf(
+                "Input error: Longitude can only be between 180 and -180\nPlease try a different value: ");
             continue;
         }
 
@@ -150,7 +157,8 @@ int main()
 
             case 3:
                 bbox.c2.lon = inputVal;
-                printf("All coordinates have been assigned, starting risk assessment with the following coordinates (~11cm precision):\ncoordinate 1: %.6f, %.6f\ncoordinate 2: %.6f, %.6f\n",
+                printf(
+                    "All coordinates have been assigned, starting risk assessment with the following coordinates (~11cm precision):\ncoordinate 1: %.6f, %.6f\ncoordinate 2: %.6f, %.6f\n",
                     bbox.c1.lat,
                     bbox.c1.lon,
                     bbox.c2.lat,
@@ -196,46 +204,59 @@ int main()
 
     GCoord bbox2 = (GCoord){.lat = 38.788000, .lon = -79.182000};
 
-
+    debug_log(MESSAGE, "Getting fire data...");
     printf("\033[32mGetting fire data...\033[s\n\033[0m");
     FireSlice fire_slice = {0};
-    if (!get_fire_areas(bbox.c1, &fire_slice))
-        return 1;
+    if (!isTestRun)
+    {
+        if (!get_fire_areas(bbox.c1, &fire_slice))
+        {
+            debug_log(MESSAGE, "Could not find fireArea");
+            return 1;
+        }
+    }
+    else
+    {
+        // Handcrafted FireArea struct, to be replaced by the return of get_fire_areas above
+        FireArea fire_area = (FireArea){
+            .gcoord = local_to_global((LCoord){.x = 1, .y = 1}, bbox, VIEWPORT_HEIGHT,
+                                      VIEWPORT_WIDTH),
+            .lcoord = (LCoord){.x = 1, .y = 1},
+            .temperature = 400,
+            .frp = 0.41,
+            .category = "WF"
+        };
 
-    printf("FOUND %lu FIRES\n", fire_slice.len);
+        FireArea fire_area_2 = (FireArea){
+            .gcoord = local_to_global(
+                (LCoord){.x = (double)VIEWPORT_WIDTH / 2, .y = (double)VIEWPORT_HEIGHT / 2}, bbox,
+                VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
+            .lcoord = (LCoord){.x = (double)VIEWPORT_WIDTH / 2, .y = (double)VIEWPORT_HEIGHT / 2},
+            .temperature = 600,
+            .frp = 0.75,
+            .category = "WF"
+        };
+
+        FireArea area[] = {fire_area, fire_area_2};
+        fire_slice = (FireSlice)slice_from(area, 2);
+    }
+
+    debug_log(MESSAGE, "FOUND %llu FIRES\n", fire_slice.len);
+    printf("FOUND %llu FIRES\n", fire_slice.len);
 
     printf("\33[u\033[0J\033[32mSuccess!\033[0m\n");
 
     //
     // Temporary testing of assess_roads function
     //
-    FireSlice tempFires = slice_with_len(FireSlice, 2);
 
-    // Handcrafted FireArea struct, to be replaced by the return of get_fire_areas above
-    FireArea fire_area = (FireArea){
-        .gcoord = local_to_global((LCoord){.x = 1, .y = 1}, bbox, VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
-        .lcoord = (LCoord){  .x = 1,   .y = 1},
-        .temperature = 400,
-        .frp = 0.41,
-        .category = "WF"
-    };
-
-    FireArea fire_area_2 = (FireArea){
-        .gcoord = local_to_global((LCoord){  .x = (double)VIEWPORT_WIDTH / 2,   .y =  (double)VIEWPORT_HEIGHT / 2}, bbox, VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
-        .lcoord = (LCoord){  .x = (double)VIEWPORT_WIDTH / 2,   .y =  (double)VIEWPORT_HEIGHT / 2},
-        .temperature = 600,
-        .frp = 0.75,
-        .category = "WF"
-    };
-
-    tempFires.items[0] = fire_area;
-    tempFires.items[1] = fire_area_2;
 
 
     VegSlice veg_slice = {0};
 
     if (!get_vegetation(bbox, &veg_slice))
         return 1;
+
     printf("FOUND %zu AREAS!\n", veg_slice.len);
     debug_log(MESSAGE, "FOUND %zu VEGETATION AREAS!", veg_slice.len);
     size_t veg_node_sum = 0;
@@ -282,7 +303,7 @@ int main()
     prepend_console_command(&draw_console, "REFRESH CONSOLE");
     prepend_console_command(&run_simulation, "RUN SIMULATION");
     assess_roads(&roads, &fire_slice, &veg_slice);
-    draw_current_state(roads, tempFires, veg_slice);
+    draw_current_state(roads, fire_slice, veg_slice);
     while (programIsRunning)
     {
         // This is just to get the program to shut up about it "not being modified in the loop"
@@ -290,7 +311,6 @@ int main()
         execute_command();
     }
 
-    slice_free(&tempFires);
     slice_free(&roads);
     slice_free(&fire_slice);
     slice_free(&veg_slice);

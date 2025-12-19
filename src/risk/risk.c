@@ -8,7 +8,7 @@
 
 static const double wildfireRiskMultiplier = 2;
 static const float nearbyFireThreshold = 20000;
-static const double decayConstant = 2;
+static const double decayConstant = 100;
 
 
 void assess_roads(RoadSegSlice* roads, FireSlice* fires, VegSlice* vegetation)
@@ -60,15 +60,16 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires, VegSlice* vegetation)
 
         double vegetationImpactScore = calc_vegetation_impact_score(road, &fire, *vegetation);
 
-
         // Calculate a hazard score
-        double hazardScore = firstToReachModifier + fire.frp * pow(-dst, decayConstant) * vegetationImpactScore;
+        double hazardScore = fire.frp * exp(-dst / decayConstant) * vegetationImpactScore + 1;
 
         // Calculate an exposure score
-        double exposureScore = 1 / (1 + dst);
+        double exposureScore = firstToReachModifier; //1 / (1 + dst);
 
         // Multiply hazard and exposure score
         double impactScore = hazardScore * exposureScore;
+        debug_log(MESSAGE, "check1: %lf", hazardScore);
+        debug_log(MESSAGE, "check2: %lf", impactScore);
 
         // Add the final score to the risk value
         totalImpactScore += impactScore;
