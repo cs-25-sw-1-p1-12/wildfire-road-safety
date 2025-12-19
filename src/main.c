@@ -256,6 +256,7 @@ int main()
 
     if (!get_vegetation(bbox, &veg_slice))
         return 1;
+
     printf("FOUND %zu AREAS!\n", veg_slice.len);
     debug_log(MESSAGE, "FOUND %zu VEGETATION AREAS!", veg_slice.len);
     size_t veg_node_sum = 0;
