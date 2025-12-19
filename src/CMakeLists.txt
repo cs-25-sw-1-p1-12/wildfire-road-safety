@@ -19,6 +19,7 @@ set(SOURCE_FILES ./dyn.c ./map/map.c ./map/web.c ./map/json_lexer.c ./map/op_jso
         models/vegetation.c
         Debug/Logger.c
         caching/cache.c
+        ../tests/test.c
 )
 
 add_executable(wfrs main.c ${SOURCE_FILES})
