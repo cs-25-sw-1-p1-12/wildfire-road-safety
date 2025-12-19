@@ -134,6 +134,8 @@ int main()
     if (!get_fire_areas(bbox.c1, &fire_slice))
         return 1;
 
+    printf("FOUND %lu FIRES\n", fire_slice.len);
+
     assess_roads(&roads, fire_slice);
 
 

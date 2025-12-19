@@ -56,7 +56,7 @@ bool fire_json_parse(char* input, FireSlice* fire_data)
         expect_token(tok, JSON_OPEN_OBJ);
 
         FireArea fire = {0};
-        while (true) // FIRE OBJECT FIElDS
+        while (true) // FIRE OBJECT FIELDS
         {
             tok = json_lexer_next(&lex);
             if (tok.tag == JSON_CLOSE_OBJ)
