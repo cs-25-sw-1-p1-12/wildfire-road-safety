@@ -39,10 +39,8 @@ int main()
     //
     // Input handling
     //
-    printf("To create a risk assessment, you will need to provide coordinates to form a square "
-           "bounding box.\n");
-    printf("(A bounding box is made up of two coordinates, the top left corner of the box and the "
-           "bottom right)\n\n");
+    printf("To create a risk assessment, you will need to provide coordinates to form a square bounding box.\n");
+    printf("(A bounding box is made up of two coordinates, the top left corner of the box and the bottom right)\n\n");
     printf("If you wish to test the application, enter -1000 below to use a predefined area.\n");
     printf("To start, please provide the latitude of the first coordinate: ");
 
@@ -62,9 +60,11 @@ int main()
                 .c2 = { .lat = 57.01467041792688, .lon = 9.99681826817088}
             };
 
-            printf("Using coordinates for bounding box around Cassiopeia (~11cm "
-                   "precision):\ncoordinate 1: %.6f, %.6f\ncoordinate 2: %.6f, %.6f\n",
-                   bbox.c1.lat, bbox.c1.lon, bbox.c2.lat, bbox.c2.lon);
+            printf("Using coordinates for bounding box around Cassiopeia (~11cm precision):\ncoordinate 1: %.6f, %.6f\ncoordinate 2: %.6f, %.6f\n", 
+                bbox.c1.lat, 
+                bbox.c1.lon, 
+                bbox.c2.lat, 
+                bbox.c2.lon);
 
             coordsRead = 4;
         }
@@ -79,16 +79,14 @@ int main()
         // Ensure the input is valid for latitude
         if ((inputVal > 90 || inputVal < -90) && (coordsRead == 0 || coordsRead == 2))
         {
-            printf("Input error: Latitude can only be between 90 and -90.\nPlease try a different "
-                   "value: ");
+            printf("Input error: Latitude can only be between 90 and -90.\nPlease try a different value: ");
             continue;
         }
 
         // Ensure the input is valid for longitude
         if ((inputVal > 180 || inputVal < -180) && (coordsRead == 1 || coordsRead == 3))
         {
-            printf("Input error: Longitude can only be between 180 and -180\nPlease try a "
-                   "different value: ");
+            printf("Input error: Longitude can only be between 180 and -180\nPlease try a different value: ");
             continue;
         }
 
@@ -111,10 +109,11 @@ int main()
 
             case 3:
                 bbox.c2.lon = inputVal;
-                printf("All coordinates have been assigned, starting risk assessment with the "
-                       "following coordinates (~11cm precision):\ncoordinate 1: %.6f, "
-                       "%.6f\ncoordinate 2: %.6f, %.6f\n",
-                       bbox.c1.lat, bbox.c1.lon, bbox.c2.lat, bbox.c2.lon);
+                printf("All coordinates have been assigned, starting risk assessment with the following coordinates (~11cm precision):\ncoordinate 1: %.6f, %.6f\ncoordinate 2: %.6f, %.6f\n",
+                    bbox.c1.lat,
+                    bbox.c1.lon,
+                    bbox.c2.lat,
+                    bbox.c2.lon);
                 break;
 
             default:
@@ -134,6 +133,8 @@ int main()
     FireSlice fire_slice = {0};
     if (!get_fire_areas(bbox.c1, &fire_slice))
         return 1;
+
+    printf("FOUND %lu FIRES\n", fire_slice.len);
 
     assess_roads(&roads, fire_slice);
 
