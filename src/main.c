@@ -58,12 +58,12 @@ void signal_handler(int signalNum)
             debug_log(ERROR, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
             fprintf(stderr, "(SIGSEGV) PROGRAM CLOSED DUE TO A SEGMENTATION FAULT!");
             exit(EXIT_FAILURE);
-            break;
+
         case SIGFPE:
             debug_log(ERROR, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
             fprintf(stderr, "(SIGFPE) PROGRAM CLOSED DUE TO A FLOATING POINT ERROR!");
             exit(EXIT_FAILURE);
-            break;
+
         default:
             debug_log(ERROR, "COULD NOT RECOGNISE SIGNAL");
             fprintf(stderr, "COULD NOT RECOGNISE SIGNAL");
@@ -216,7 +216,7 @@ int main()
         .gcoord = local_to_global((LCoord){.x = 1, .y = 1}, bbox, VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
         .lcoord = (LCoord){  .x = 1,   .y = 1},
         .temperature = 400,
-        .weatherIndex = 0.41,
+        .frp = 0.41,
         .category = "WF"
     };
 
@@ -224,7 +224,7 @@ int main()
         .gcoord = local_to_global((LCoord){  .x = (double)VIEWPORT_WIDTH / 2,   .y =  (double)VIEWPORT_HEIGHT / 2}, bbox, VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
         .lcoord = (LCoord){  .x = (double)VIEWPORT_WIDTH / 2,   .y =  (double)VIEWPORT_HEIGHT / 2},
         .temperature = 600,
-        .weatherIndex = 0.75,
+        .frp = 0.75,
         .category = "WF"
     };
 
