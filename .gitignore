@@ -4,8 +4,10 @@ cmake-build-debug
 .vscode
 .DS_Store
 .dotenv
+.direnv
 .envrc
-shell.nix
+*.nix
+flake.*
 debug.log
 *_out.*
 .cache
