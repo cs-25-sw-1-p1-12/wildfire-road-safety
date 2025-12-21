@@ -12,7 +12,7 @@ IF (WIN32)
 ENDIF()
 
 
-set(SOURCE_FILES ./dyn.c ./map/map.c ./map/web.c ./map/json_lexer.c ./map/op_json_parse.c ./map/fire_json_parse.c ./risk/risk.c ./simulation/simulation.c
+set(SOURCE_FILES ./dyn.c ./map/map.c ./map/web.c ./map/json_lexer.c ./map/op_json_parse.c ./map/fire_json_parse.c ./risk/risk.c
         ./visual/visual.c
         models/geo.c
         models/road.c

@@ -6,7 +6,6 @@
 #include <math.h>
 #include <stdlib.h>
 
-static const double wildfireRiskMultiplier = 2;
 static const float nearbyFireThreshold = 20000;
 static const double decayConstant = 100;
 
@@ -46,18 +45,20 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires, VegSlice* vegetation)
         // Get the fire area at index i
         FireArea fire = fires->items[i];
 
+        // Calculate the distance from the fire to the road
         const double dst = GetFireDstToRoad(*road, fire);
         if (dst == INFINITY)
         {
             debug_log(ERROR, "GetFireDstToRoad: Length is infinite!");
             assert(dst == INFINITY);
         }
+
+        // Calculate Estimated Time Of Arrival (ETA) for both the fire and a car going the speed limit
         const double fireEta = dst / avgFireSpeed;
         const double carEta = roadLength / avgCarSpeed;
         const double firstToReachModifier = carEta / MAX(1, fireEta);
-        // debug_log(MESSAGE, "firstToReachModifier: %lf", firstToReachModifier);
-        // debug_log(MESSAGE, "FireEta: %lf, CarEta: %lf", fireEta, carEta);
 
+        // Calculate a vegetation impact score
         double vegetationImpactScore = calc_vegetation_impact_score(road, &fire, *vegetation);
 
         // Calculate a hazard score
@@ -75,7 +76,7 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires, VegSlice* vegetation)
         totalImpactScore += impactScore;
     }
 
-    // Calculate a vulnerability weight
+    // Calculate a vulnerability weight based on the type of material of the road
     double vulnerabilityWeight = 1;
 
     if (road->material != NULL && strcmp(road->material, "asphalt") == 0)
@@ -86,6 +87,7 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires, VegSlice* vegetation)
     // Multiply risk by vulnerabilityWeight
     const double risk = totalImpactScore * vulnerabilityWeight;
 
+    // Set the risk value of the road to the calculated risk and return the risk value
     road->risk = (RoadRisk) risk;
     return (RoadRisk) risk;
 }
