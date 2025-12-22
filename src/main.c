@@ -213,33 +213,31 @@ int main()
     else
     {
         // Handcrafted FireArea struct, to be replaced by the return of get_fire_areas above
-        FireArea fire_area = (FireArea){
-            .gcoord =
-                local_to_global((LCoord){.x = 1, .y = 1},
-                bbox, VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
-            .lcoord = (LCoord){.x = 1, .y = 1},
-            .temperature = 400,
-            .frp = 0.41,
-            .category = "WF"
-        };
+        GCoord fire_coord = {.lat = 57.01317456814029, .lon = 9.993529822110123};
+        FireArea fire_area =
+            (FireArea){.gcoord = fire_coord,
+                       .lcoord = global_to_local(fire_coord, bbox, VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
+                       .temperature = 400,
+                       .frp = 0.41,
+                       .category = "WF"};
 
-        FireArea fire_area_2 = (FireArea){
-            .gcoord = local_to_global(
-                (LCoord){.x = (double)VIEWPORT_WIDTH / 2, .y = (double)VIEWPORT_HEIGHT / 2},
-                bbox,
-                VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
-            .lcoord = (LCoord){.x = (double)VIEWPORT_WIDTH / 2, .y = (double)VIEWPORT_HEIGHT / 2},
-            .temperature = 600,
-            .frp = 0.75,
-            .category = "WF"
-        };
+        // FireArea fire_area_2 = (FireArea){
+        //     .gcoord = local_to_global(
+        //         (LCoord){.x = (double)VIEWPORT_WIDTH / 2, .y = (double)VIEWPORT_HEIGHT / 2},
+        //         bbox,
+        //         VIEWPORT_HEIGHT, VIEWPORT_WIDTH),
+        //     .lcoord = (LCoord){.x = (double)VIEWPORT_WIDTH / 2, .y = (double)VIEWPORT_HEIGHT /
+        //     2}, .temperature = 600, .frp = 0.75, .category = "WF"
+        // };
 
-        FireArea area[] = {fire_area, fire_area_2};
-        fire_slice = (FireSlice)slice_from(area, 2);
+        FireVec fvec = {0};
+        vec_push(&fvec, fire_area);
+        fire_slice = (FireSlice)vec_owned_slice(fvec);
+        vec_free(fvec);
     }
 
     debug_log(MESSAGE, "FOUND %llu FIRES\n", fire_slice.len);
-    printf("FOUND %llu FIRES\n", fire_slice.len);
+    printf("FOUND %zu FIRES\n", fire_slice.len);
 
     printf("\33[u\033[0J\033[32mSuccess!\033[0m\n");
 
