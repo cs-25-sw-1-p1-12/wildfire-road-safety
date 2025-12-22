@@ -4,10 +4,34 @@ This project aims to assist in the creation of risk assesments during evacuation
 
 ## Installation & usage
 
+### Dependencies
+The program uses [libcurl](https://curl.se/libcurl/) as its only dependency.
+On windows this dependency should be installed automatically by cmake when building the program,
+but mac and linux machines should make sure the library is installed beforehand.
+
 ### Installation
 To install the project on a local machine, download the repository by clicking on the green code button at the top of this repository page. This will show a menu where you can click on "Download ZIP". This will download the project to your desired location as a .zip file. Once the download has finished, unzip the file.
+Alternativly, clone the github repo in the desired location:
 
-Now that the project has been downloaded on your local machine and has been unzipped, you can go ahead and run the application. The built application can be found in the directory `/cmake-build-debug/src/` under the name `wfrs`.
+```sh
+$ git clone https://github.com/cs-25-sw-1-p1-12/wildfire-road-safety.git
+```
+
+
+Now that the project has been downloaded on your local machine and has been unzipped or cloned from the github repo,
+you can go ahead and build the application with cmake:
+
+
+```sh
+$ mkdir build
+$ cmake -B ./build
+$ cmake --build ./build
+```
+
+Then the executable should be located in `./build/src/wfrs`.
+
+Alternativly, if using an IDE like Clion, you can simply enter the project and run the program, then
+the built application can be found in the directory `./cmake-build-debug/src/` under the name `wfrs`.
 
 
 ### Usage
