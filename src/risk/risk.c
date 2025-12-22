@@ -20,7 +20,8 @@ void assess_roads(RoadSegSlice* roads, FireSlice* fires, VegSlice* vegetation)
         FireVec nearbyFires = {0};
         for (int fi = 0; fi < fires->len; fi++)
         {
-            if (GetFireDstToRoad(road, fires->items[fi]) > nearbyFireThreshold) continue;
+            if (get_fire_dst_to_road(road, fires->items[fi]) > nearbyFireThreshold)
+                continue;
 
             vec_push(&nearbyFires, fires->items[fi]);
         }
@@ -46,14 +47,15 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires, VegSlice* vegetation)
         FireArea fire = fires->items[i];
 
         // Calculate the distance from the fire to the road
-        const double dst = GetFireDstToRoad(*road, fire);
+        const double dst = get_fire_dst_to_road(*road, fire);
         if (dst == INFINITY)
         {
-            debug_log(ERROR, "GetFireDstToRoad: Length is infinite!");
+            debug_log(ERROR, "get_fire_dst_to_road: Length is infinite!");
             assert(dst == INFINITY);
         }
 
-        // Calculate Estimated Time Of Arrival (ETA) for both the fire and a car going the speed limit
+        // Calculate Estimated Time Of Arrival (ETA) for both the fire and a car going the speed
+        // limit
         const double fireEta = dst / avgFireSpeed;
         const double carEta = roadLength / avgCarSpeed;
         const double firstToReachModifier = carEta / MAX(1, fireEta);
@@ -65,7 +67,7 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires, VegSlice* vegetation)
         double hazardScore = fire.frp * exp(-dst / decayConstant) * vegetationImpactScore + 1;
 
         // Calculate an exposure score
-        double exposureScore = firstToReachModifier; //1 / (1 + dst);
+        double exposureScore = firstToReachModifier; // 1 / (1 + dst);
 
         // Multiply hazard and exposure score
         double impactScore = hazardScore * exposureScore;
@@ -88,8 +90,8 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires, VegSlice* vegetation)
     const double risk = totalImpactScore * vulnerabilityWeight;
 
     // Set the risk value of the road to the calculated risk and return the risk value
-    road->risk = (RoadRisk) risk;
-    return (RoadRisk) risk;
+    road->risk = (RoadRisk)risk;
+    return (RoadRisk)risk;
 }
 
 double calc_vegetation_impact_score(RoadSeg* road, FireArea* fire, VegSlice vegetation)
@@ -126,20 +128,20 @@ double get_vegetation_risk_multiplier(VegType veg_type)
 {
     switch (veg_type)
     {
-        case VEG_GRASS: // MEDIUM RISK
+        case VEG_GRASS:     // MEDIUM RISK
             return 1;
-        case VEG_FARMLAND: // MEDIUM/HIGH RISK
+        case VEG_FARMLAND:  // MEDIUM/HIGH RISK
             return 1.3;
-        case VEG_FOREST: // HIGH RISK
+        case VEG_FOREST:    // HIGH RISK
             return 1.5;
         case VEG_SHRUBLAND: // HIGH RISK
             return 1.8;
-        case VEG_SAND: // HIGH OR LOW RISK
-        case VEG_ROCK: // LOW RISK
+        case VEG_SAND:      // HIGH OR LOW RISK
+        case VEG_ROCK:      // LOW RISK
             return 0.95;
-        case VEG_WETLAND: // LOW RISK
+        case VEG_WETLAND:   // LOW RISK
             return 0.9;
-        case VEG_WATER: // LESSENS RISK
+        case VEG_WATER:     // LESSENS RISK
             return 0.8;
         case VEG_BUILDINGS: // SPECIAL CASE, HAS POTENTIAL TO HARM PEOPLE
             return 2;
