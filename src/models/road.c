@@ -1,22 +1,23 @@
-#include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
-
 #include "road.h"
+
+
 #include "fire.h"
 
-void assign_roads(int number_of_roads, RoadSeg road, FireArea fire);
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 GCoord GCoord_to_kilometer(GCoord gCoord)
 {
-    //https://stackoverflow.com/a/1253545
+    // https://stackoverflow.com/a/1253545
     double latUnit = 110.574;
     double lonUnit = 111.320 * cos(gCoord.lat * (3.14159265359 / 180));
 
     return (GCoord){.lat = latUnit * gCoord.lat, lonUnit * gCoord.lon};
 }
-GCoord closest_point_on_segment(const GCoord a, const GCoord b, const GCoord p) {
-    //https://chatgpt.com/
+GCoord closest_point_on_segment(const GCoord a, const GCoord b, const GCoord p)
+{
+    // https://chatgpt.com/
     const double ABy = b.lat - a.lat;
     const double ABx = b.lon - a.lon;
 
@@ -27,8 +28,10 @@ GCoord closest_point_on_segment(const GCoord a, const GCoord b, const GCoord p) 
     const double ap_ab = APx * ABx + APy * ABy;
 
     double t = ap_ab / ab2;
-    if (t < 0.0) t = 0.0;
-    if (t > 1.0) t = 1.0;
+    if (t < 0.0)
+        t = 0.0;
+    if (t > 1.0)
+        t = 1.0;
 
     GCoord coord;
     coord.lat = a.lat + ABy * t;
@@ -39,17 +42,15 @@ GCoord closest_point_on_segment(const GCoord a, const GCoord b, const GCoord p) 
 
 double haversine(GCoord c1, GCoord c2)
 {
-    //https://www.geeksforgeeks.org/dsa/haversine-formula-to-find-distance-between-two-points-on-a-sphere/
+    // https://www.geeksforgeeks.org/dsa/haversine-formula-to-find-distance-between-two-points-on-a-sphere/
     double lat1 = c1.lat;
     double lat2 = c2.lat;
     double lon1 = c1.lon;
     double lon2 = c2.lon;
     // distance between latitudes
     // and longitudes
-    double dLat = (lat2 - lat1) *
-                  M_PI / 180.0;
-    double dLon = (lon2 - lon1) *
-                  M_PI / 180.0;
+    double dLat = (lat2 - lat1) * M_PI / 180.0;
+    double dLon = (lon2 - lon1) * M_PI / 180.0;
 
     // convert to radians
     lat1 = (lat1) * M_PI / 180.0;
@@ -70,7 +71,8 @@ RoadNode* get_closest_road_node(RoadSeg road, GCoord p)
     RoadNode* node = NULL;
     for (int i = 0; i < road.nodes.len - 1; i++)
     {
-        GCoord coord = closest_point_on_segment(road.nodes.items[i].coords, road.nodes.items[i + 1].coords, p);
+        GCoord coord =
+            closest_point_on_segment(road.nodes.items[i].coords, road.nodes.items[i + 1].coords, p);
         // debug_log(MESSAGE, "coord: (%lf, %lf)", coord.lat, coord.lon);
         double dst = haversine(p, coord);
         if (distance > dst)
@@ -84,7 +86,7 @@ RoadNode* get_closest_road_node(RoadSeg road, GCoord p)
     return node;
 }
 
-double GetFireDstToRoad(RoadSeg road, FireArea fire)
+double get_fire_dst_to_road(RoadSeg road, FireArea fire)
 {
     double distance = INFINITY;
     for (int i = 0; i < road.nodes.len - 1; i++)
@@ -112,13 +114,4 @@ double GetRoadLength(RoadSeg road)
         distance += haversine(road.nodes.items[i].coords, road.nodes.items[i + 1].coords);
     }
     return distance * 1000;
-}
-
-void assign_roads(int number_of_roads, RoadSeg road, FireArea fire)
-{
-    int* roadsegments = (int*)malloc(sizeof(int) * number_of_roads);
-    for (int i; i < number_of_roads; i++)
-    {
-        roadsegments[i] = GetFireDstToRoad(road, fire);
-    }
 }

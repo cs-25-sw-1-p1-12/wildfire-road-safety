@@ -92,28 +92,29 @@ RoadRisk assess_road(RoadSeg* road, FireVec* fires, VegSlice* vegetation)
     return (RoadRisk) risk;
 }
 
-double calc_vegetation_impact_score(RoadSeg* road, FireArea* fire, VegSlice vegetation) {
+double calc_vegetation_impact_score(RoadSeg* road, FireArea* fire, VegSlice vegetation)
+{
     double impactScore = 0;
 
     VegType veg_type = VEG_NONE;
 
-    //Fire vegetation multiplier
+    // Fire vegetation multiplier
     LCoord lCoord = global_to_local(fire->gcoord, globalBounds, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
     if (coord_has_vegetation(lCoord, &veg_type, vegetation, 1, globalBounds, VIEWPORT_WIDTH,
-    VIEWPORT_HEIGHT))
+                             VIEWPORT_HEIGHT))
     {
         impactScore += get_vegetation_risk_multiplier(veg_type);
     }
 
 
-    //Road vegetation multiplier
+    // Road vegetation multiplier
     veg_type = VEG_NONE;
 
     lCoord = global_to_local(get_closest_road_node(*road, fire->gcoord)->coords, globalBounds,
-    VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+                             VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
     if (coord_has_vegetation(lCoord, &veg_type, vegetation, 1, globalBounds, VIEWPORT_WIDTH,
-    VIEWPORT_HEIGHT))
+                             VIEWPORT_HEIGHT))
     {
         impactScore += get_vegetation_risk_multiplier(veg_type);
     }

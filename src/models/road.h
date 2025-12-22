@@ -47,9 +47,8 @@ typedef struct
 
 typedef SliceDef(RoadSeg) RoadSegSlice;
 
-double GetFireDstToRoad(RoadSeg road, FireArea fire);
+double get_fire_dst_to_road(RoadSeg road, FireArea fire);
 double GetRoadLength(RoadSeg road);
-void assign_roads(int number_of_roads, RoadSeg road, FireArea fire);
 GCoord GCoord_to_kilometer(GCoord gCoord);
 double haversine(GCoord c1, GCoord c2);
 GCoord closest_point_on_segment(GCoord a, GCoord b, GCoord p);
