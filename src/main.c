@@ -287,13 +287,6 @@ int main()
             max_type = veg_slice.items[i].type;
     }
     debug_log(MESSAGE, "MAX VEGETATION TYPE AFTER PARSE: %d", max_type);
-    // printf("DRAWING IMAGE\n");
-    // debug_log(MESSAGE, "DRAWING IMAGE");
-    // save_state_to_image("img_out.png", 512, roads, fire_slice, veg_slice);
-    // debug_log(MESSAGE, "FINISHED IMAGE");
-    // debug_log(MESSAGE, "DRAWING VEG-ONLY IMAGE");
-    // save_veg_to_image("veg_img_out.png", 512, veg_slice, bbox);
-    // debug_log(MESSAGE, "FINISHED VEG-ONLY IMAGE");
 
     set_bounding_box(bbox);
     prepend_console_command(&stop_program, "EXIT");
@@ -308,8 +301,5 @@ int main()
         execute_command();
     }
 
-    slice_free(&roads);
-    slice_free(&fire_slice);
-    slice_free(&veg_slice);
     return 0;
 }
